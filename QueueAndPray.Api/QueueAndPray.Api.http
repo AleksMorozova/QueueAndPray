@@ -1,0 +1,6 @@
+@QueueAndPray.Api_HostAddress = http://localhost:5008
+
+GET {{QueueAndPray.Api_HostAddress}}/job/
+Accept: application/json
+
+###
