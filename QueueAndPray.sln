@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueueAndPray.Infrastructure
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueueAndPray.Domain", "QueueAndPray.Domain\QueueAndPray.Domain.csproj", "{D6B1D30A-BAC8-49C8-9F7C-F2B0B75966F1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueueAndPray.FakeProcessor.Console", "QueueAndPray.FakeProcessor.Console\QueueAndPray.FakeProcessor.Console.csproj", "{477589C1-CA68-4A33-A1DC-E537D4F1CB19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{D6B1D30A-BAC8-49C8-9F7C-F2B0B75966F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D6B1D30A-BAC8-49C8-9F7C-F2B0B75966F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D6B1D30A-BAC8-49C8-9F7C-F2B0B75966F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{477589C1-CA68-4A33-A1DC-E537D4F1CB19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{477589C1-CA68-4A33-A1DC-E537D4F1CB19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{477589C1-CA68-4A33-A1DC-E537D4F1CB19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{477589C1-CA68-4A33-A1DC-E537D4F1CB19}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

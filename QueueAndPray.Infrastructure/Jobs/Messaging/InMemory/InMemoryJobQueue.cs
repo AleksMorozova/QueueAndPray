@@ -1,8 +1,8 @@
 ﻿using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Events;
+using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using System.Threading.Channels;
 
-namespace QueueAndPray.Infrastructure.Jobs.Messaging;
+namespace QueueAndPray.Infrastructure.Jobs.Messaging.InMemory;
 
 public sealed class InMemoryJobQueue : IJobQueue
 {

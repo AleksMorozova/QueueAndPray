@@ -1,4 +1,4 @@
-﻿using QueueAndPray.Application.Jobs.Events;
+﻿using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 
 namespace QueueAndPray.Application.Jobs.Abstractions;
 

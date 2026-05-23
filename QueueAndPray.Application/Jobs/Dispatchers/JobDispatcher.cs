@@ -1,5 +1,6 @@
 ﻿using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events;
+using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Domain.Jobs;
 
 namespace QueueAndPray.Application.Jobs.Dispatchers;
@@ -17,6 +18,7 @@ public sealed class JobDispatcher : IJobDispatcher
         Job job,
         CancellationToken cancellationToken)
     {
+        // Potentially send to different queue
         IJobQueuedEvent jobQueuedEvent = job.Type switch
         {
             JobType.Email => new EmailJobQueuedEvent

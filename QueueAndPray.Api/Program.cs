@@ -1,11 +1,12 @@
 using QueueAndPray.Api.Middleware;
 using QueueAndPray.Api.Workers;
+using QueueAndPray.Api.Workers.Messaging;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Dispatchers;
-using QueueAndPray.Application.Jobs.Events;
-using QueueAndPray.Application.Jobs.Processing;
 using QueueAndPray.Application.Jobs.Services;
-using QueueAndPray.Infrastructure.Jobs.Messaging;
+using QueueAndPray.Infrastructure.Jobs.Messaging.InMemory;
+using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
+using QueueAndPray.Infrastructure.Jobs.Options;
 using QueueAndPray.Infrastructure.Jobs.Persistence;
 using System.Text.Json.Serialization;
 
@@ -29,33 +30,19 @@ builder.Services.AddSingleton<IJobDispatcher, JobDispatcher>();
 // In-memory persistence
 builder.Services.AddSingleton<IJobRepository, InMemoryJobRepository>();
 
-// In-memory queues
-builder.Services.AddSingleton<InMemoryJobQueue>();
-builder.Services.AddSingleton<IJobQueue>(sp =>
-    sp.GetRequiredService<InMemoryJobQueue>());
+// messaging
+builder.Services.Configure<RabbitMqOptions>(
+    builder.Configuration.GetSection("RabbitMq"));
 
-builder.Services.AddSingleton<InMemoryJobStatusQueue>();
-builder.Services.AddSingleton<IJobStatusQueue>(sp =>
-    sp.GetRequiredService<InMemoryJobStatusQueue>());
+builder.Services.AddSingleton<RabbitMqConnectionFactory>();
+
+builder.Services.AddSingleton<IJobQueue, RabbitMqJobQueue>();
+
+// Background workers
+builder.Services.AddHostedService<RabbitMqJobStatusConsumerWorker>();
 
 // Job processing
 builder.Services.AddSingleton<IJobProcessingDispatcher, JobProcessingDispatcher>();
-
-builder.Services.AddSingleton<
-    IJobProcessor<EmailJobQueuedEvent>,
-    EmailJobProcessor>();
-
-builder.Services.AddSingleton<
-    IJobProcessor<PdfGenerationJobQueuedEvent>,
-    PdfGenerationJobProcessor>();
-
-builder.Services.AddSingleton<
-    IJobProcessor<ReportGenerationJobQueuedEvent>,
-    ReportGenerationJobProcessor>();
-
-// Background workers
-builder.Services.AddHostedService<FakeJobProcessorWorker>();
-builder.Services.AddHostedService<JobProcessingEventConsumer>();
 
 var app = builder.Build();
 

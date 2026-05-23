@@ -1,10 +1,10 @@
-﻿using QueueAndPray.Application.Jobs.Events;
+﻿using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
 
 namespace QueueAndPray.Application.Jobs.Abstractions;
 
 public interface IJobProcessingDispatcher
 {
     Task DispatchAsync(
-        IJobQueuedEvent jobQueuedEvent,
+        JobStatusEvent jobStatusEvent,
         CancellationToken cancellationToken);
 }
