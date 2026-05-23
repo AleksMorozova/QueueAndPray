@@ -17,11 +17,11 @@ namespace QueueAndPray.Api.Controllers
         }   
         
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<PagedResponse<JobDetailedResponse>>>> GetJobs([FromQuery] GetJobsRequest request, CancellationToken cancellationToken)
+        public async Task<ActionResult<ApiResponse<PagedResponse<JobResponse>>>> GetJobs([FromQuery] GetJobsRequest request, CancellationToken cancellationToken)
         {
             var result = await _jobService.GetJobsAsync(request, cancellationToken);
 
-            return Ok(ApiResponse<PagedResponse<JobDetailedResponse>>.Ok(result));
+            return Ok(ApiResponse<PagedResponse<JobResponse>>.Ok(result));
         }
 
         [HttpGet("{id}")]

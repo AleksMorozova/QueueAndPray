@@ -31,7 +31,7 @@ public class JobProcessingEventConsumer : BackgroundService
                     await _jobRepository.UpdateStatusAsync(
                         processed.JobId,
                         JobStatus.Completed,
-                        "Completed",
+                        GetSuccessResult(processed.Type),
                         stoppingToken);
 
                     _logger.LogInformation("Job {JobId} status changed to Completed", processed.JobId);
@@ -57,5 +57,19 @@ public class JobProcessingEventConsumer : BackgroundService
                     break;
             }
         }
+    }
+
+    private static string GetSuccessResult(JobType jobType)
+    {
+        return jobType switch
+        {
+            JobType.Email => "Email sent successfully",
+
+            JobType.PdfGeneration => "PDF generated successfully",
+
+            JobType.ReportGeneration => "Report generated successfully",
+
+            _ => "Job processed successfully"
+        };
     }
 }

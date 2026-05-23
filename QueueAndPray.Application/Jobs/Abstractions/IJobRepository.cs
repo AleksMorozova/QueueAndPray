@@ -6,5 +6,6 @@ public interface IJobRepository
 {
     Task AddAsync(Job job, CancellationToken cancellationToken);
     Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
-    Task UpdateStatusAsync(Guid id, JobStatus status, string reason, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<Job>> GetAllAsync(CancellationToken cancellationToken);
+    Task UpdateStatusAsync(Guid id, JobStatus status, string? result, CancellationToken cancellationToken);
 }

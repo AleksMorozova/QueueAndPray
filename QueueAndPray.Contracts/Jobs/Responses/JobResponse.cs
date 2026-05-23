@@ -2,7 +2,7 @@
 
 namespace QueueAndPray.Contracts.Jobs.Responses;
 
-public class JobDetailedResponse
+public class JobResponse
 {
     public Guid JobId { get; init; }
 
@@ -12,15 +12,5 @@ public class JobDetailedResponse
 
     public JobStatus Status { get; init; } = default!;
 
-    public string Payload { get; init; } = default!;
-
     public string Result { get; init; } = default!;
-
-    public int RetryCount { get; init; }
-
-    public DateTimeOffset CreatedAt { get; init; }
-
-    public DateTimeOffset? CompletedAt { get; init; }
-
-    public IReadOnlyCollection<JobStatusHistoryResponse> StatusHistory { get; set; } = [];
 }

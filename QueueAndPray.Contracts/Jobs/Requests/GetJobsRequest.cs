@@ -1,4 +1,6 @@
-﻿namespace QueueAndPray.Contracts.Jobs.Requests;
+﻿using QueueAndPray.Domain.Jobs;
+
+namespace QueueAndPray.Contracts.Jobs.Requests;
 
 public class GetJobsRequest
 {
@@ -6,9 +8,9 @@ public class GetJobsRequest
 
     public int PageSize { get; init; } = 20;
 
-    public string? Status { get; init; }
+    public JobStatus? Status { get; init; }
 
-    public string? JobType { get; init; }
+    public JobType? JobType { get; init; }
 
     public DateTimeOffset? CreatedFrom { get; init; }
 

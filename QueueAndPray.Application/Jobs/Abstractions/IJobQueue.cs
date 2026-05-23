@@ -4,5 +4,5 @@ namespace QueueAndPray.Application.Jobs.Abstractions;
 
 public interface IJobQueue
 {
-    Task PublishAsync(JobQueuedEvent jobCreatedEvent, CancellationToken cancellationToken);
+    Task PublishAsync(IJobQueuedEvent jobCreatedEvent, CancellationToken cancellationToken);
 }

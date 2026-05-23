@@ -14,7 +14,7 @@ public interface IJobService
         Guid jobId,
         CancellationToken cancellationToken);
 
-    Task<PagedResponse<JobDetailedResponse>> GetJobsAsync(
+    Task<PagedResponse<JobResponse>> GetJobsAsync(
         GetJobsRequest request,
         CancellationToken cancellationToken);
 }
