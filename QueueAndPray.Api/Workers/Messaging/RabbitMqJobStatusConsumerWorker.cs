@@ -5,6 +5,7 @@ using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 namespace QueueAndPray.Api.Workers.Messaging;
 
@@ -13,22 +14,27 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
     private readonly RabbitMqConnectionFactory _connectionFactory;
     private readonly RabbitMqOptions _options;
     private readonly ILogger<RabbitMqJobStatusConsumerWorker> _logger;
-    private readonly IJobStatusProcessor _dispatcher;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public RabbitMqJobStatusConsumerWorker(
         RabbitMqConnectionFactory connectionFactory,
         IOptions<RabbitMqOptions> options,
-        IJobStatusProcessor dispatcher,
-        ILogger<RabbitMqJobStatusConsumerWorker> logger)
+        ILogger<RabbitMqJobStatusConsumerWorker> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _connectionFactory = connectionFactory;
         _options = options.Value;
-        _dispatcher = dispatcher;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+
+        var _dispatcher = scope.ServiceProvider
+            .GetRequiredService<IJobStatusProcessor>();
+
         await using var connection =
             await _connectionFactory.CreateConnectionAsync();
 

@@ -30,15 +30,13 @@ public class JobService : IJobService
         var now = DateTime.UtcNow;
         var jobId = Guid.NewGuid();
 
-        var job = new Job
-        {
-            Id = jobId,
-            Description = request.Description,
-            Type = request.Type,
-            Payload = request.Payload,
-            Status = JobStatus.Queued,
-            CreatedAtUtc = now
-        };
+        var job = new Job(
+            id: jobId,
+            description: request.Description,
+            payload: request.Payload,
+            type: request.Type,
+            status: JobStatus.Queued,
+            result: null);
 
         await _jobRepository.AddAsync(job, cancellationToken);
 

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using QueueAndPray.Api.Middleware;
 using QueueAndPray.Api.Workers;
 using QueueAndPray.Api.Workers.Messaging;
@@ -25,15 +26,20 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Application services
-builder.Services.AddSingleton<IJobService, JobService>();
-builder.Services.AddSingleton<IJobDispatcher, JobDispatcher>();
-
+builder.Services.AddScoped<IJobService, JobService>();
+builder.Services.AddScoped<IJobDispatcher, JobDispatcher>();
 
 builder.Services.AddSingleton<IEmailJobProcessor, FakeEmailJobProcessor>();
-//IEmailJobProcessor
-// In-memory persistence
-builder.Services.AddSingleton<IJobRepository, InMemoryJobRepository>();
 
+// In-memory persistence
+//builder.Services.AddSingleton<IJobRepository, InMemoryJobRepository>();
+builder.Services.AddDbContext<QueueAndPrayDbContext>(options =>
+{
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("QueueAndPrayDb"));
+});
+
+builder.Services.AddScoped<IJobRepository, EfJobRepository>();
 // messaging
 builder.Services.Configure<RabbitMqOptions>(
     builder.Configuration.GetSection("RabbitMq"));
@@ -47,7 +53,7 @@ builder.Services.AddHostedService<RabbitMqJobStatusConsumerWorker>();
 builder.Services.AddHostedService<RabbitMqEmailJobConsumerWorker>();
 
 // Job processing
-builder.Services.AddSingleton<IJobStatusProcessor, JobStatusProcessor>();
+builder.Services.AddScoped<IJobStatusProcessor, JobStatusProcessor>();
 
 var app = builder.Build();
 

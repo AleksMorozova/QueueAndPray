@@ -2,6 +2,19 @@
 
 public class Job
 {
+    private JobType type;
+    private JobStatus status;
+
+    public Job(Guid id, string description, string payload, JobType type, JobStatus status, string? result)
+    {
+        Id = id;
+        Description = description;
+        Payload = payload;
+        this.type = type;
+        this.status = status;
+        Result = result;
+    }
+
     public Guid Id { get; set; }
 
     public string Description { get; set; } = default!;
