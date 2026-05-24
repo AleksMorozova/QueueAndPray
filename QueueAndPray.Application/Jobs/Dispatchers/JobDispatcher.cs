@@ -1,5 +1,5 @@
-﻿using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Events;
+﻿using QueueAndPray.Application.Common.Exceptions;
+using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Domain.Jobs;
 
@@ -18,36 +18,23 @@ public sealed class JobDispatcher : IJobDispatcher
         Job job,
         CancellationToken cancellationToken)
     {
-        // Potentially send to different queue
-        IJobQueuedEvent jobQueuedEvent = job.Type switch
+        try
         {
-            JobType.Email => new EmailJobQueuedEvent
+            var jobQueuedEvent = new JobQueuedEvent
             {
                 JobId = job.Id,
                 Payload = job.Payload,
+                Type = job.Type,
                 QueuedAtUtc = DateTime.UtcNow
-            },
+            };
 
-            JobType.PdfGeneration => new PdfGenerationJobQueuedEvent
-            {
-                JobId = job.Id,
-                Payload = job.Payload,
-                QueuedAtUtc = DateTime.UtcNow
-            },
-
-            JobType.ReportGeneration => new ReportGenerationJobQueuedEvent
-            {
-                JobId = job.Id,
-                Payload = job.Payload,
-                QueuedAtUtc = DateTime.UtcNow
-            },
-
-            _ => throw new NotSupportedException(
-                $"Job type {job.Type} is not supported")
-        };
-
-        await _jobQueue.PublishAsync(
-            jobQueuedEvent,
-            cancellationToken);
+            await _jobQueue.PublishAsync(
+                jobQueuedEvent,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw new AppException("job_not_published", $"Job '{job.Id}' was lost somewhere between hope and queue. Base exception: {ex.Message}");
+        }
     }
 }

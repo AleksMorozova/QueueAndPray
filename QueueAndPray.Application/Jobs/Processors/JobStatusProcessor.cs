@@ -1,13 +1,13 @@
 ﻿using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
 
-namespace QueueAndPray.Application.Jobs.Dispatchers;
+namespace QueueAndPray.Application.Jobs.Processors;
 
-public sealed class JobProcessingDispatcher : IJobProcessingDispatcher
+public sealed class JobStatusProcessor : IJobStatusProcessor
 {
     private readonly IJobRepository _jobRepository;
 
-    public JobProcessingDispatcher(IJobRepository jobRepository)
+    public JobStatusProcessor(IJobRepository jobRepository)
     {
         _jobRepository = jobRepository;
     }

@@ -2,9 +2,13 @@
 
 namespace QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 
-public interface IJobQueuedEvent
+public class JobQueuedEvent
 {
     public Guid JobId { get; set; }
 
+    public string Payload { get; set; } = default!;
+
     public JobType Type { get; set; }
+
+    public DateTime QueuedAtUtc { get; set; }
 }

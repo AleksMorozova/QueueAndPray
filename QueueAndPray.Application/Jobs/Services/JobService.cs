@@ -59,7 +59,7 @@ public class JobService : IJobService
         var result = await _jobRepository.GetByIdAsync(jobId, cancellationToken);
 
         if (result is null)
-            throw new AppException("key_not_found_error", $"Job '{jobId}' was not found. Maybe it was deployed on Friday.)");
+            throw new AppException("key_not_found_error", $"Job '{jobId}' was not found. Maybe it was deployed on Friday.");
 
         var response = result.ToDetailedResponse();
 

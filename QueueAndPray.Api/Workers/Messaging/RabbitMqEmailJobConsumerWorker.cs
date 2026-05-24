@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
+using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using System.Text;
@@ -8,22 +8,22 @@ using System.Text.Json;
 
 namespace QueueAndPray.Api.Workers.Messaging;
 
-public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
+public class RabbitMqEmailJobConsumerWorker : BackgroundService
 {
     private readonly RabbitMqConnectionFactory _connectionFactory;
     private readonly RabbitMqOptions _options;
-    private readonly ILogger<RabbitMqJobStatusConsumerWorker> _logger;
-    private readonly IJobStatusProcessor _dispatcher;
+    private readonly ILogger<RabbitMqEmailJobConsumerWorker> _logger;
+   private readonly IEmailJobProcessor _processor;
 
-    public RabbitMqJobStatusConsumerWorker(
+    public RabbitMqEmailJobConsumerWorker(
         RabbitMqConnectionFactory connectionFactory,
         IOptions<RabbitMqOptions> options,
-        IJobStatusProcessor dispatcher,
-        ILogger<RabbitMqJobStatusConsumerWorker> logger)
+        IEmailJobProcessor processor,
+        ILogger<RabbitMqEmailJobConsumerWorker> logger)
     {
         _connectionFactory = connectionFactory;
         _options = options.Value;
-        _dispatcher = dispatcher;
+        _processor = processor;
         _logger = logger;
     }
 
@@ -36,7 +36,7 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
             await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
         await channel.QueueDeclareAsync(
-            queue: _options.JobStatusQueueName,
+            queue: _options.EmailJobQueueName,
             durable: true,
             exclusive: false,
             autoDelete: false,
@@ -46,7 +46,7 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             var result = await channel.BasicGetAsync(
-                queue: _options.JobStatusQueueName,
+                queue: _options.EmailJobQueueName,
                 autoAck: false,
                 cancellationToken: stoppingToken);
 
@@ -60,7 +60,11 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
             {
                 var message = Encoding.UTF8.GetString(result.Body.ToArray());
 
-                var envelope = JsonSerializer.Deserialize<JobStatusEventEnvelope>(message);
+                _logger.LogInformation(
+                    "RabbitMQ status message received: {Message}",
+                    message);
+
+                var envelope = JsonSerializer.Deserialize<JobQueuedEventEnvelope>(message);
 
                 if (envelope is null)
                 {
@@ -68,19 +72,11 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
                         "RabbitMQ status envelope is empty. QueueAndPray is confused.");
                 }
 
-                _logger.LogInformation(
-                    "Received {EventType} for job {JobId}",
-                    envelope.Type,
-                    envelope.JobId);
+                _logger.LogInformation("Email job received: {Message}", message);
 
-                await _dispatcher.DispatchAsync(new JobStatusEvent()
-                {
-                    Type = envelope.Type,
-                    JobId = envelope.JobId,
-                    Status = envelope.Status,
-                    Reason = envelope.Reason,
-                    ProceedsAtUtc = envelope.ProceedsAtUtc,
-                }, stoppingToken);
+                var payload = JsonSerializer.Deserialize<JobQueuedEvent>(envelope.Payload);
+
+                await _processor.SendEmailAsync(payload, stoppingToken);
 
                 await channel.BasicAckAsync(
                     deliveryTag: result.DeliveryTag,

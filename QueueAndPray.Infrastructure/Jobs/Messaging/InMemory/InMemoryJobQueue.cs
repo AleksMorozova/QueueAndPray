@@ -6,12 +6,12 @@ namespace QueueAndPray.Infrastructure.Jobs.Messaging.InMemory;
 
 public sealed class InMemoryJobQueue : IJobQueue
 {
-    private readonly Channel<IJobQueuedEvent> _channel = Channel.CreateUnbounded<IJobQueuedEvent>();
+    private readonly Channel<JobQueuedEvent> _channel = Channel.CreateUnbounded<JobQueuedEvent>();
 
-    public ChannelReader<IJobQueuedEvent> Reader => _channel.Reader;
+    public ChannelReader<JobQueuedEvent> Reader => _channel.Reader;
 
     public async Task PublishAsync(
-        IJobQueuedEvent jobCreatedEvent,
+        JobQueuedEvent jobCreatedEvent,
         CancellationToken cancellationToken)
     {
         await _channel.Writer.WriteAsync(jobCreatedEvent, cancellationToken);

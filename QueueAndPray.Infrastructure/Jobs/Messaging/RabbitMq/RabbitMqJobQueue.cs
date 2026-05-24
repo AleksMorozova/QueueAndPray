@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using QueueAndPray.Application.Common.Exceptions;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
+using QueueAndPray.Domain.Jobs;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using RabbitMQ.Client;
 using System.Text;
@@ -12,19 +15,24 @@ public sealed class RabbitMqJobQueue : IJobQueue
 {
     private readonly RabbitMqConnectionFactory _connectionFactory;
     private readonly RabbitMqOptions _options;
+    private readonly ILogger<RabbitMqJobQueue> _logger;
 
     public RabbitMqJobQueue(
         RabbitMqConnectionFactory connectionFactory,
-        IOptions<RabbitMqOptions> options)
+        IOptions<RabbitMqOptions> options,
+        ILogger<RabbitMqJobQueue> logger)
     {
         _connectionFactory = connectionFactory;
+        _logger = logger;
         _options = options.Value;
     }
 
     public async Task PublishAsync(
-        IJobQueuedEvent jobQueuedEvent,
+        JobQueuedEvent jobQueuedEvent,
         CancellationToken cancellationToken)
     {
+        var queueName = Resolve(jobQueuedEvent.Type);
+
         await using var connection =
             await _connectionFactory.CreateConnectionAsync();
 
@@ -39,6 +47,11 @@ public sealed class RabbitMqJobQueue : IJobQueue
                 jobQueuedEvent.GetType())
         };
 
+        _logger.LogInformation("Publishing {EventType} for job {JobId} to queue {QueueName}",
+            envelope.EventType,
+            jobQueuedEvent.JobId,
+            queueName);
+
         var body = Encoding.UTF8.GetBytes(
             JsonSerializer.Serialize(envelope));
 
@@ -47,28 +60,38 @@ public sealed class RabbitMqJobQueue : IJobQueue
             Persistent = true
         };
 
-        Console.WriteLine($"Declaring queue: '{_options.JobQueueName}'");
-
         await channel.QueueDeclareAsync(
-            queue: _options.JobQueueName,
+            queue: queueName,
             durable: true,
             exclusive: false,
             autoDelete: false,
             arguments: null,
             cancellationToken: cancellationToken);
 
-        Console.WriteLine($"Queue declared: '{_options.JobQueueName}'");
-
-        Console.WriteLine("Publishing message...");
-
         await channel.BasicPublishAsync(
             exchange: string.Empty,
-            routingKey: _options.JobQueueName,
+            routingKey: queueName,
             mandatory: false,
             basicProperties: properties,
             body: body,
             cancellationToken: cancellationToken);
 
-        Console.WriteLine("Message published.");
+        _logger.LogInformation(
+            "Published {EventType} for job {JobId} to queue {QueueName}",
+            envelope.EventType,
+            jobQueuedEvent.JobId,
+            queueName);
+    }
+
+    private string Resolve(JobType jobType)
+    {
+        return jobType switch
+        {
+            JobType.Email => _options.EmailJobQueueName,
+            JobType.PdfGeneration => _options.PdfGenerationJobQueueName,
+            JobType.ReportGeneration => _options.ReportGenerationJobQueueName,
+
+            _ => throw new NotSupportedException($"Queue for job type {jobType} is not configured")
+        };
     }
 }
