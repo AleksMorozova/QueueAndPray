@@ -60,9 +60,24 @@ public sealed class EfJobRepository : IJobRepository
             .ToListAsync(cancellationToken);
     }
 
-    public Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var entity = await _dbContext.Jobs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        
+        if (entity is null)
+        {
+            return null;
+        }
+
+        return new Job(
+            entity.Id,
+            entity.Description,
+            entity.Payload,
+            entity.Type,
+            entity.Status,
+            entity.Result);
     }
 
     public async Task UpdateStatusAsync(

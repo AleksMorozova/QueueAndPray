@@ -29,6 +29,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<IJobDispatcher, JobDispatcher>();
 
+builder.Services.AddSingleton<IJobStatusDispatcher, JobStatusDispatcher>();
 builder.Services.AddSingleton<IEmailJobProcessor, FakeEmailJobProcessor>();
 
 // In-memory persistence
@@ -44,13 +45,18 @@ builder.Services.AddScoped<IJobRepository, EfJobRepository>();
 builder.Services.Configure<RabbitMqOptions>(
     builder.Configuration.GetSection("RabbitMq"));
 
+builder.Services.Configure<RabbitMqRetryOptions>(
+    builder.Configuration.GetSection("RabbitMqRetry"));
+
 builder.Services.AddSingleton<RabbitMqConnectionFactory>();
 
 builder.Services.AddSingleton<IJobQueue, RabbitMqJobQueue>();
+builder.Services.AddSingleton<IJobStatusQueue, RabbitMqJobStatusQueue>();
 
 // Background workers
 builder.Services.AddHostedService<RabbitMqJobStatusConsumerWorker>();
 builder.Services.AddHostedService<RabbitMqEmailJobConsumerWorker>();
+builder.Services.AddHostedService<RabbitMqDeadLetterEmailWorker>();
 
 // Job processing
 builder.Services.AddScoped<IJobStatusProcessor, JobStatusProcessor>();

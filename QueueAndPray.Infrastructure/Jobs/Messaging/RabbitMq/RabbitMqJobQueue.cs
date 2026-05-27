@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using QueueAndPray.Application.Common.Exceptions;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Domain.Jobs;
@@ -33,11 +32,20 @@ public sealed class RabbitMqJobQueue : IJobQueue
     {
         var queueName = Resolve(jobQueuedEvent.Type);
 
+        var deadLetterQueue = $"{queueName}.dead-letter";
+
+        var arguments = new Dictionary<string, object?>
+        {
+            ["x-dead-letter-exchange"] = "",
+            ["x-dead-letter-routing-key"] = deadLetterQueue
+        };
+
         await using var connection =
             await _connectionFactory.CreateConnectionAsync();
 
         await using var channel =
             await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+        var q =  channel.CurrentQueue;
 
         var envelope = new JobQueuedEventEnvelope
         {
@@ -65,7 +73,7 @@ public sealed class RabbitMqJobQueue : IJobQueue
             durable: true,
             exclusive: false,
             autoDelete: false,
-            arguments: null,
+            arguments: arguments,
             cancellationToken: cancellationToken);
 
         await channel.BasicPublishAsync(

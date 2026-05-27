@@ -30,79 +30,91 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await using var scope = _scopeFactory.CreateAsyncScope();
-
-        var _dispatcher = scope.ServiceProvider
-            .GetRequiredService<IJobStatusProcessor>();
-
-        await using var connection =
-            await _connectionFactory.CreateConnectionAsync();
-
-        await using var channel =
-            await connection.CreateChannelAsync(cancellationToken: stoppingToken);
-
-        await channel.QueueDeclareAsync(
-            queue: _options.JobStatusQueueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null,
-            cancellationToken: stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            var result = await channel.BasicGetAsync(
+            await using var connection =
+                await _connectionFactory.CreateConnectionAsync();
+
+            await using var channel =
+                await connection.CreateChannelAsync(cancellationToken: stoppingToken);
+
+            await channel.QueueDeclareAsync(
                 queue: _options.JobStatusQueueName,
-                autoAck: false,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null,
                 cancellationToken: stoppingToken);
 
-            if (result is null)
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(1000, stoppingToken);
-                continue;
-            }
+                var result = await channel.BasicGetAsync(
+                    queue: _options.JobStatusQueueName,
+                    autoAck: false,
+                    cancellationToken: stoppingToken);
 
-            try
-            {
-                var message = Encoding.UTF8.GetString(result.Body.ToArray());
-
-                var envelope = JsonSerializer.Deserialize<JobStatusEventEnvelope>(message);
-
-                if (envelope is null)
+                if (result is null)
                 {
-                    throw new InvalidOperationException(
-                        "RabbitMQ status envelope is empty. QueueAndPray is confused.");
+                    await Task.Delay(1000, stoppingToken);
+                    continue;
                 }
 
-                _logger.LogInformation(
-                    "Received {EventType} for job {JobId}",
-                    envelope.Type,
-                    envelope.JobId);
-
-                await _dispatcher.DispatchAsync(new JobStatusEvent()
+                try
                 {
-                    Type = envelope.Type,
-                    JobId = envelope.JobId,
-                    Status = envelope.Status,
-                    Reason = envelope.Reason,
-                    ProceedsAtUtc = envelope.ProceedsAtUtc,
-                }, stoppingToken);
+                    var message = Encoding.UTF8.GetString(result.Body.ToArray());
 
-                await channel.BasicAckAsync(
-                    deliveryTag: result.DeliveryTag,
-                    multiple: false,
-                    cancellationToken: stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to process RabbitMQ status message");
+                    var envelope = JsonSerializer.Deserialize<JobStatusEventEnvelope>(message);
 
-                await channel.BasicNackAsync(
-                    deliveryTag: result.DeliveryTag,
-                    multiple: false,
-                    requeue: false,
-                    cancellationToken: stoppingToken);
+                    if (envelope is null)
+                    {
+                        throw new InvalidOperationException(
+                            "RabbitMQ status envelope is empty. QueueAndPray is confused.");
+                    }
+
+                    _logger.LogInformation(
+                        "Received {EventType} for job {JobId}",
+                        envelope.Type,
+                        envelope.JobId);
+
+                    await using var scope = _scopeFactory.CreateAsyncScope();
+
+                    var processor = scope.ServiceProvider
+                        .GetRequiredService<IJobStatusProcessor>();
+
+                    await processor.DispatchAsync(new JobStatusEvent
+                    {
+                        Type = envelope.Type,
+                        JobId = envelope.JobId,
+                        Status = envelope.Status,
+                        Reason = envelope.Reason,
+                        ProceedsAtUtc = envelope.ProceedsAtUtc,
+                    }, stoppingToken);
+
+                    await channel.BasicAckAsync(
+                        deliveryTag: result.DeliveryTag,
+                        multiple: false,
+                        cancellationToken: stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process RabbitMQ status message");
+
+                    await channel.BasicNackAsync(
+                        deliveryTag: result.DeliveryTag,
+                        multiple: false,
+                        requeue: false,
+                        cancellationToken: CancellationToken.None);
+                }
             }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "RabbitMQ job status consumer is stopping gracefully.");
         }
     }
 }
