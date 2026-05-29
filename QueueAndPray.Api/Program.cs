@@ -2,14 +2,18 @@ using Microsoft.EntityFrameworkCore;
 using QueueAndPray.Api.Middleware;
 using QueueAndPray.Api.Workers;
 using QueueAndPray.Api.Workers.Messaging;
+using QueueAndPray.Application.Common.Resilience;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Dispatchers;
+using QueueAndPray.Application.Jobs.Orchestration;
 using QueueAndPray.Application.Jobs.Processors;
 using QueueAndPray.Application.Jobs.Services;
+using QueueAndPray.Application.Jobs.Tracking;
 using QueueAndPray.Infrastructure.Jobs.Messaging.InMemory;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using QueueAndPray.Infrastructure.Jobs.Persistence;
+using QueueAndPray.Infrastructure.Resilience;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,6 +57,8 @@ builder.Services.AddSingleton<RabbitMqConnectionFactory>();
 builder.Services.AddSingleton<IJobQueue, RabbitMqJobQueue>();
 builder.Services.AddSingleton<IJobStatusQueue, RabbitMqJobStatusQueue>();
 
+builder.Services.AddScoped<IJobFailureTracker, JobFailureTracker>();
+
 // Background workers
 builder.Services.AddHostedService<RabbitMqJobStatusConsumerWorker>();
 builder.Services.AddHostedService<RabbitMqEmailJobConsumerWorker>();
@@ -60,6 +66,10 @@ builder.Services.AddHostedService<RabbitMqDeadLetterEmailWorker>();
 
 // Job processing
 builder.Services.AddScoped<IJobStatusProcessor, JobStatusProcessor>();
+
+builder.Services.AddSingleton<IRetryPolicyExecutor, RetryPolicyExecutor>();
+
+builder.Services.AddScoped<IEmailJobOrchestrator, EmailJobOrchestrator>();
 
 var app = builder.Build();
 

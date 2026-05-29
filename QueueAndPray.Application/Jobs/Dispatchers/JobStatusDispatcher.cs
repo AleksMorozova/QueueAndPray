@@ -15,16 +15,17 @@ public class JobStatusDispatcher : IJobStatusDispatcher
         _jobStatusQueue = jobStatusQueue;
     }
 
-    public async Task DispatchAsync(JobQueuedEvent jobQueuedEvent, CancellationToken cancellationToken)
+    public async Task DispatchAsync(JobQueuedEvent jobQueuedEvent, JobStatus status, string? reason, CancellationToken cancellationToken)
     {
         try
         {
             var jobStatusEvent = new JobStatusEvent
             {
                 JobId = jobQueuedEvent.JobId,
-                Status = JobStatus.Completed,
+                Status = status,
                 Type = JobType.Email,
-                ProceedsAtUtc = DateTime.UtcNow
+                ProceedsAtUtc = DateTime.UtcNow,
+                Reason = ""
             };
 
             await _jobStatusQueue.PublishAsync(jobStatusEvent, cancellationToken);

@@ -1,7 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
+using QueueAndPray.Application.Jobs.Abstractions;
+using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using System.Text;
+using System.Text.Json;
 
 namespace QueueAndPray.Api.Workers.Messaging;
 
@@ -68,12 +71,23 @@ public sealed class RabbitMqDeadLetterEmailWorker : BackgroundService
                     "Dead-letter message received: {Message}",
                     message);
 
-                // TODO:
-                // save to db
-                // notify
-                // requeue
-                // inspect
-                // sacrifice another microservice
+                var envelope = JsonSerializer.Deserialize<JobQueuedEventEnvelope>(
+                    message);
+
+                if (envelope is null)
+                {
+                    throw new InvalidOperationException(
+                        "Dead-letter envelope is empty. Even the failures gave up.");
+                }
+
+                var payload = JsonSerializer.Deserialize<JobQueuedEvent>(
+                    envelope.Payload);
+
+                if (payload is null)
+                {
+                    throw new InvalidOperationException(
+                        "Dead-letter payload is empty. QueueAndPray lost the corpse.");
+                }
 
                 await channel.BasicAckAsync(
                     deliveryTag: result.DeliveryTag,

@@ -57,4 +57,14 @@ public class InMemoryJobRepository : IJobRepository
 
         return Task.CompletedTask;
     }
+
+    public Task IncrementRetryCountAsync(Guid jobId, int attempt, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task MarkAsDeadLetteredAsync(Guid jobId, string reason, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
 }

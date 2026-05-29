@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using QueueAndPray.Application.Common.Resilience;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
@@ -13,18 +14,18 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
     private readonly RabbitMqConnectionFactory _connectionFactory;
     private readonly RabbitMqOptions _options;
     private readonly ILogger<RabbitMqEmailJobConsumerWorker> _logger;
-   private readonly IEmailJobProcessor _processor;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public RabbitMqEmailJobConsumerWorker(
         RabbitMqConnectionFactory connectionFactory,
         IOptions<RabbitMqOptions> options,
-        IEmailJobProcessor processor,
-        ILogger<RabbitMqEmailJobConsumerWorker> logger)
+        ILogger<RabbitMqEmailJobConsumerWorker> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _connectionFactory = connectionFactory;
         _options = options.Value;
-        _processor = processor;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -53,6 +54,8 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            Guid jobId = Guid.Empty;
+
             var result = await channel.BasicGetAsync(
                 queue: _options.EmailJobQueueName,
                 autoAck: false,
@@ -63,6 +66,9 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
                 await Task.Delay(1000, stoppingToken);
                 continue;
             }
+
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var failureTracker = scope.ServiceProvider.GetRequiredService<IJobFailureTracker>();
 
             try
             {
@@ -83,8 +89,12 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
                 _logger.LogInformation("Email job received: {Message}", message);
 
                 var payload = JsonSerializer.Deserialize<JobQueuedEvent>(envelope.Payload);
+                jobId = payload?.JobId ?? throw new InvalidOperationException(
+                    "RabbitMQ status payload is empty. QueueAndPray is confused.");
 
-                await ProcessWithRetryAsync(payload, stoppingToken);
+                var emailJobOrchestrator = scope.ServiceProvider.GetRequiredService<IEmailJobOrchestrator>();
+
+                await emailJobOrchestrator.ProcessAsync(payload, stoppingToken);
 
                 await channel.BasicAckAsync(
                     deliveryTag: result.DeliveryTag,
@@ -93,7 +103,9 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process RabbitMQ status message");
+                _logger.LogError(ex, "Failed to process RabbitMQ status message"); 
+
+                await failureTracker.TrackDeadLetterAsync(jobId, ex.Message, stoppingToken);
 
                 await channel.BasicNackAsync(
                     deliveryTag: result.DeliveryTag,
@@ -102,36 +114,5 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
                     cancellationToken: stoppingToken);
             }
         }
-    }
-
-    private async Task ProcessWithRetryAsync(
-        JobQueuedEvent payload,
-        CancellationToken cancellationToken)
-    {
-        const int maxAttempts = 3;
-
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            try
-            {
-                await _processor.SendEmailAsync(payload, cancellationToken);
-                return;
-            }
-            catch (Exception ex) when (attempt < maxAttempts)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Email job {JobId} failed on attempt {Attempt}. Retrying...",
-                    payload.JobId,
-                    attempt);
-
-                await Task.Delay(
-                    TimeSpan.FromSeconds(attempt),
-                    cancellationToken);
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"Email job '{payload.JobId}' failed after {maxAttempts} attempts.");
     }
 }

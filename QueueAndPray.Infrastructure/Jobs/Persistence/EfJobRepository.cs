@@ -80,11 +80,7 @@ public sealed class EfJobRepository : IJobRepository
             entity.Result);
     }
 
-    public async Task UpdateStatusAsync(
-        Guid jobId,
-        JobStatus status,
-        string? result,
-        CancellationToken cancellationToken)
+    public async Task UpdateStatusAsync(Guid jobId, JobStatus status, string? result, CancellationToken cancellationToken)
     {
         var job = await _dbContext.Jobs
             .FirstOrDefaultAsync(x => x.Id == jobId, cancellationToken);
@@ -94,6 +90,45 @@ public sealed class EfJobRepository : IJobRepository
 
         job.Status = status;
         job.Result = result;
+        job.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task IncrementRetryCountAsync(Guid jobId, int attempt, CancellationToken cancellationToken)
+    {
+        var job = await _dbContext.Jobs
+            .FirstOrDefaultAsync(x => x.Id == jobId, cancellationToken);
+
+        if (job is null)
+        {
+            return;
+        }
+
+        job.RetryCount = attempt;
+
+        job.FirstFailedAtUtc ??= DateTime.UtcNow;
+        job.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task MarkAsDeadLetteredAsync(
+    Guid jobId,
+    string reason,
+    CancellationToken cancellationToken)
+    {
+        var job = await _dbContext.Jobs
+            .FirstOrDefaultAsync(x => x.Id == jobId, cancellationToken);
+
+        if (job is null)
+        {
+            return;
+        }
+
+        job.Status = JobStatus.Failed;
+        job.Result = $"THIS MESSAGE HAS SUFFERED ENOUGH. {reason}";
+        job.DeadLetteredAtUtc = DateTime.UtcNow;
         job.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);

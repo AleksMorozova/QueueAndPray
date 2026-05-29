@@ -5,14 +5,6 @@ namespace QueueAndPray.Application.Jobs.Processors;
 
 public sealed class FakeEmailJobProcessor : IEmailJobProcessor
 {
-    private readonly IJobStatusDispatcher _jobStatusDispatcher;
-
-    public FakeEmailJobProcessor(
-        IJobStatusDispatcher jobStatusDispatcher)
-    {
-        _jobStatusDispatcher = jobStatusDispatcher;
-    }
-
     public async Task SendEmailAsync(
         JobQueuedEvent jobQueuedEvent,
         CancellationToken cancellationToken)
@@ -26,7 +18,5 @@ public sealed class FakeEmailJobProcessor : IEmailJobProcessor
         }
 
         Console.WriteLine($"Fake email sent successfully for job {jobQueuedEvent.JobId}");
-
-        await _jobStatusDispatcher.DispatchAsync(jobQueuedEvent, cancellationToken);
     }
 }
