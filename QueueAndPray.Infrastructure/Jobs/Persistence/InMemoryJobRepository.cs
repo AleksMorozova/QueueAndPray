@@ -35,36 +35,8 @@ public class InMemoryJobRepository : IJobRepository
         return Task.FromResult(jobs);
     }
 
-    public Task UpdateStatusAsync(Guid id, JobStatus status, string result, CancellationToken cancellationToken)
+    public Task SaveAsync(Job job, CancellationToken cancellationToken)
     {
-        if (_jobs.TryGetValue(id, out var job))
-        {
-            job.Status = status;
-            job.Result = result;
-
-            job.StatusHistory.Add(new JobStatusHistoryItem
-            {
-                Status = status,
-                Result = result,
-                ChangedAtUtc = DateTime.UtcNow
-            });
-
-            if (status is JobStatus.Completed or JobStatus.Failed)
-            {
-                job.CompletedAtUtc = DateTime.UtcNow;
-            }
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public Task IncrementRetryCountAsync(Guid jobId, int attempt, CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
-
-    public Task MarkAsDeadLetteredAsync(Guid jobId, string reason, CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
+        throw new NotImplementedException();
     }
 }

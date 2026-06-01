@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QueueAndPray.Infrastructure.Jobs.Persistence;
@@ -11,9 +12,11 @@ using QueueAndPray.Infrastructure.Jobs.Persistence;
 namespace QueueAndPray.Infrastructure.Jobs.Persistence.Migrations
 {
     [DbContext(typeof(QueueAndPrayDbContext))]
-    partial class QueueAndPrayDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260530145348_AddCompletedAtUtcToJobs")]
+    partial class AddCompletedAtUtcToJobs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -66,47 +69,6 @@ namespace QueueAndPray.Infrastructure.Jobs.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Jobs");
-                });
-
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobStatusHistoryEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("ChangedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Result")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("JobId");
-
-                    b.ToTable("JobStatusHistory");
-                });
-
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobStatusHistoryEntity", b =>
-                {
-                    b.HasOne("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobEntity", "Job")
-                        .WithMany("StatusHistory")
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Job");
-                });
-
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobEntity", b =>
-                {
-                    b.Navigation("StatusHistory");
                 });
 #pragma warning restore 612, 618
         }

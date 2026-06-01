@@ -12,15 +12,17 @@ public sealed class JobStatusProcessor : IJobStatusProcessor
         _jobRepository = jobRepository;
     }
 
-    public async Task DispatchAsync(
-        JobStatusEvent jobStatusEvent,
-        CancellationToken cancellationToken)
+    public async Task DispatchAsync(JobStatusEvent jobStatusEvent, CancellationToken cancellationToken)
     {
+        var job = await _jobRepository.GetByIdAsync(jobStatusEvent.JobId, cancellationToken);
 
-        await _jobRepository.UpdateStatusAsync(
-            jobStatusEvent.JobId,
-            jobStatusEvent.Status,
-            jobStatusEvent.Reason,
-            cancellationToken);
+        if (job is null)
+        {
+            return;
+        }
+
+        job.ApplyExternalStatus(jobStatusEvent.Status, jobStatusEvent.Reason);
+
+        await _jobRepository.SaveAsync(job, cancellationToken);
     }
 }

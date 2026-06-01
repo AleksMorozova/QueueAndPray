@@ -15,44 +15,23 @@ public sealed class RetryPolicyExecutor : IRetryPolicyExecutor
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(
-        Func<CancellationToken, Task> operation,
-        Func<Exception, int, CancellationToken, Task>? onRetry,
-        Func<Exception, int, CancellationToken, Task>? onFinalFailure,
-        CancellationToken cancellationToken)
+    public async Task<RetryExecutionResult> ExecuteAsync(
+     Func<CancellationToken, Task> operation,
+     Func<Exception, int, CancellationToken, Task>? onRetry,
+     CancellationToken cancellationToken)
     {
-        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
+        const int maxAttempts = 3;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
             {
                 await operation(cancellationToken);
-                return;
+
+                return new RetryExecutionResult(true);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (attempt < maxAttempts)
             {
-                if (attempt == MaxAttempts)
-                {
-                    _logger.LogError(
-                        ex,
-                        "Operation failed on final attempt {Attempt}.",
-                        attempt);
-
-                    if (onFinalFailure is not null)
-                    {
-                        await onFinalFailure(
-                            ex,
-                            attempt,
-                            cancellationToken);
-                    }
-
-                    throw;
-                }
-
-                _logger.LogWarning(
-                    ex,
-                    "Operation failed on attempt {Attempt}. Retrying...",
-                    attempt);
-
                 if (onRetry is not null)
                 {
                     await onRetry(
@@ -65,6 +44,16 @@ public sealed class RetryPolicyExecutor : IRetryPolicyExecutor
                     TimeSpan.FromSeconds(attempt),
                     cancellationToken);
             }
+            catch (Exception ex)
+            {
+                return new RetryExecutionResult(
+                    false,
+                    ex.Message);
+            }
         }
+
+        return new RetryExecutionResult(
+            false,
+            "Unknown retry failure");
     }
 }

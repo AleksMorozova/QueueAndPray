@@ -67,8 +67,6 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
                 continue;
             }
 
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var failureTracker = scope.ServiceProvider.GetRequiredService<IJobFailureTracker>();
 
             try
             {
@@ -92,6 +90,8 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
                 jobId = payload?.JobId ?? throw new InvalidOperationException(
                     "RabbitMQ status payload is empty. QueueAndPray is confused.");
 
+                await using var scope = _scopeFactory.CreateAsyncScope();
+
                 var emailJobOrchestrator = scope.ServiceProvider.GetRequiredService<IEmailJobOrchestrator>();
 
                 await emailJobOrchestrator.ProcessAsync(payload, stoppingToken);
@@ -104,8 +104,6 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to process RabbitMQ status message"); 
-
-                await failureTracker.TrackDeadLetterAsync(jobId, ex.Message, stoppingToken);
 
                 await channel.BasicNackAsync(
                     deliveryTag: result.DeliveryTag,

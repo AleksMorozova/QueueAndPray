@@ -18,6 +18,8 @@ public class JobEntity
 
     public DateTime CreatedAtUtc { get; set; }
 
+    public DateTime? CompletedAtUtc { get; set; }
+
     public DateTime? UpdatedAtUtc { get; set; }
 
     public int RetryCount { get; set; }
@@ -25,4 +27,5 @@ public class JobEntity
     public DateTime? FirstFailedAtUtc { get; set; }
 
     public DateTime? DeadLetteredAtUtc { get; set; }
+    public List<JobStatusHistoryEntity> StatusHistory { get; set; } = [];
 }

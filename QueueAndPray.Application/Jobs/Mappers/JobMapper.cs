@@ -7,9 +7,9 @@ internal static class JobMapper
 {
     public static JobDetailedResponse ToDetailedResponse(this Job job)
     {
-        if (job is null) return null!;
-
-        var createdUtc = DateTime.SpecifyKind(job.CreatedAtUtc, DateTimeKind.Utc);
+        var createdUtc = DateTime.SpecifyKind(
+            job.CreatedAtUtc,
+            DateTimeKind.Utc);
 
         return new JobDetailedResponse
         {
@@ -19,28 +19,23 @@ internal static class JobMapper
             Status = job.Status,
             Payload = job.Payload,
             Result = job.Result,
-            RetryCount = 0,
+            RetryCount = job.RetryCount,
             CreatedAt = new DateTimeOffset(createdUtc),
-            CompletedAt = null,
+            CompletedAt = ToDateTimeOffset(job.CompletedAtUtc),
             StatusHistory = job.StatusHistory
-               .OrderBy(x => x.ChangedAtUtc)
-               .Select(x => new JobStatusHistoryResponse
-               {
-                   Status = x.Status,
-                   Result = x.Result,
-                   ChangedAt = new DateTimeOffset(
-                       DateTime.SpecifyKind(x.ChangedAtUtc, DateTimeKind.Utc))
-               })
-               .ToList()
+                .OrderBy(x => x.ChangedAtUtc)
+                .Select(x => new JobStatusHistoryResponse
+                {
+                    Status = x.Status,
+                    Result = x.Result,
+                    ChangedAt = ToDateTimeOffset(x.ChangedAtUtc)!.Value
+                })
+                .ToList()
         };
     }
 
     public static JobResponse ToJobResponse(this Job job)
     {
-        if (job is null) return null!;
-
-        var createdUtc = DateTime.SpecifyKind(job.CreatedAtUtc, DateTimeKind.Utc);
-
         return new JobResponse
         {
             JobId = job.Id,
@@ -49,5 +44,16 @@ internal static class JobMapper
             Status = job.Status,
             Result = job.Result
         };
+    }
+
+    private static DateTimeOffset? ToDateTimeOffset(DateTime? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        return new DateTimeOffset(
+            DateTime.SpecifyKind(value.Value, DateTimeKind.Utc));
     }
 }

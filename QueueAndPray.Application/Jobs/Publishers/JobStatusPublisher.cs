@@ -4,13 +4,13 @@ using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
 using QueueAndPray.Domain.Jobs;
 
-namespace QueueAndPray.Application.Jobs.Dispatchers;
+namespace QueueAndPray.Application.Jobs.Publishers;
 
-public class JobStatusDispatcher : IJobStatusDispatcher
+public class JobStatusPublisher : IJobStatusPublishers
 {
     private readonly IJobStatusQueue _jobStatusQueue;
 
-    public JobStatusDispatcher(IJobStatusQueue jobStatusQueue)
+    public JobStatusPublisher(IJobStatusQueue jobStatusQueue)
     {
         _jobStatusQueue = jobStatusQueue;
     }
@@ -25,7 +25,7 @@ public class JobStatusDispatcher : IJobStatusDispatcher
                 Status = status,
                 Type = JobType.Email,
                 ProceedsAtUtc = DateTime.UtcNow,
-                Reason = ""
+                Reason = reason
             };
 
             await _jobStatusQueue.PublishAsync(jobStatusEvent, cancellationToken);

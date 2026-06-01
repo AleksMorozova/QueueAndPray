@@ -4,11 +4,10 @@ using QueueAndPray.Api.Workers;
 using QueueAndPray.Api.Workers.Messaging;
 using QueueAndPray.Application.Common.Resilience;
 using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Dispatchers;
 using QueueAndPray.Application.Jobs.Orchestration;
 using QueueAndPray.Application.Jobs.Processors;
+using QueueAndPray.Application.Jobs.Publishers;
 using QueueAndPray.Application.Jobs.Services;
-using QueueAndPray.Application.Jobs.Tracking;
 using QueueAndPray.Infrastructure.Jobs.Messaging.InMemory;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
@@ -31,9 +30,9 @@ builder.Services.AddSwaggerGen();
 
 // Application services
 builder.Services.AddScoped<IJobService, JobService>();
-builder.Services.AddScoped<IJobDispatcher, JobDispatcher>();
+builder.Services.AddScoped<IJobPublisher, JobPublisher>();
 
-builder.Services.AddSingleton<IJobStatusDispatcher, JobStatusDispatcher>();
+builder.Services.AddSingleton<IJobStatusPublishers, JobStatusPublisher>();
 builder.Services.AddSingleton<IEmailJobProcessor, FakeEmailJobProcessor>();
 
 // In-memory persistence
@@ -56,8 +55,6 @@ builder.Services.AddSingleton<RabbitMqConnectionFactory>();
 
 builder.Services.AddSingleton<IJobQueue, RabbitMqJobQueue>();
 builder.Services.AddSingleton<IJobStatusQueue, RabbitMqJobStatusQueue>();
-
-builder.Services.AddScoped<IJobFailureTracker, JobFailureTracker>();
 
 // Background workers
 builder.Services.AddHostedService<RabbitMqJobStatusConsumerWorker>();

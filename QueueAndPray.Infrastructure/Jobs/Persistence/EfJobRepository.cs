@@ -3,11 +3,7 @@ using QueueAndPray.Application.Common.Exceptions;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Domain.Jobs;
 using QueueAndPray.Infrastructure.Jobs.Persistence.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using QueueAndPray.Infrastructure.Jobs.Persistence.Mappers;
 
 namespace QueueAndPray.Infrastructure.Jobs.Persistence;
 
@@ -15,121 +11,76 @@ public sealed class EfJobRepository : IJobRepository
 {
     private readonly QueueAndPrayDbContext _dbContext;
 
-    public EfJobRepository(QueueAndPrayDbContext dbContext)
+    public EfJobRepository(
+        QueueAndPrayDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(Job job, CancellationToken cancellationToken)
+    public async Task AddAsync(
+        Job job,
+        CancellationToken cancellationToken)
     {
-        try 
-        {
-            var entity = new JobEntity
-            {
-                Id = job.Id,
-                Description = job.Description,
-                Payload = job.Payload,
-                Type = job.Type,
-                Status = job.Status,
-                Result = job.Result,
-                CreatedAtUtc = DateTime.UtcNow
-            };
+        var entity = job.ToEntity();
 
-            _dbContext.Jobs.Add(entity);
+        _dbContext.Jobs.Add(entity);
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new AppException("job_not_saved", $"Job '{job.Id}' was not created. The database refused to cooperate. Maybe it needs coffee. Base exception: {ex.Message}");
-        }
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyCollection<Job>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<Job?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _dbContext.Jobs
+            .AsNoTracking()
+            .Include(x => x.StatusHistory)
+            .FirstOrDefaultAsync(x => x.Id == id,cancellationToken);
+
+        return entity?.ToDomain();
+    }
+
+    public async Task<IReadOnlyCollection<Job>> GetAllAsync(
+        CancellationToken cancellationToken)
     {
         return await _dbContext.Jobs
             .AsNoTracking()
             .OrderByDescending(x => x.CreatedAtUtc)
-            .Select(x => new Job(
-                x.Id,
-                x.Description,
-                x.Payload,
-                x.Type,
-                x.Status,
-                x.Result))
+            .Select(x => x.ToDomain())
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<Job?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    public async Task SaveAsync(
+        Job job,
+        CancellationToken cancellationToken)
     {
         var entity = await _dbContext.Jobs
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-        
+            .Include(x => x.StatusHistory)
+            .FirstOrDefaultAsync(x => x.Id == job.Id, cancellationToken);
+
         if (entity is null)
         {
-            return null;
+            throw new InvalidOperationException(
+                $"Job '{job.Id}' was not found.");
         }
 
-        return new Job(
-            entity.Id,
-            entity.Description,
-            entity.Payload,
-            entity.Type,
-            entity.Status,
-            entity.Result);
-    }
+        entity.UpdateEntity(job);
 
-    public async Task UpdateStatusAsync(Guid jobId, JobStatus status, string? result, CancellationToken cancellationToken)
-    {
-        var job = await _dbContext.Jobs
-            .FirstOrDefaultAsync(x => x.Id == jobId, cancellationToken);
+        var existingHistoryIds = entity.StatusHistory
+            .Select(x => x.Id)
+            .ToHashSet();
 
-        if (job is null)
-            throw new InvalidOperationException($"Job '{jobId}' was not found.");
+        var newHistoryItems = job.StatusHistory
+            .Where(x => !existingHistoryIds.Contains(x.Id))
+            .Select(x => x.ToEntity())
+            .ToList();
 
-        job.Status = status;
-        job.Result = result;
-        job.UpdatedAtUtc = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task IncrementRetryCountAsync(Guid jobId, int attempt, CancellationToken cancellationToken)
-    {
-        var job = await _dbContext.Jobs
-            .FirstOrDefaultAsync(x => x.Id == jobId, cancellationToken);
-
-        if (job is null)
+        if (newHistoryItems.Count > 0)
         {
-            return;
+            await _dbContext.JobStatusHistory.AddRangeAsync(
+                newHistoryItems,
+                cancellationToken);
         }
-
-        job.RetryCount = attempt;
-
-        job.FirstFailedAtUtc ??= DateTime.UtcNow;
-        job.UpdatedAtUtc = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task MarkAsDeadLetteredAsync(
-    Guid jobId,
-    string reason,
-    CancellationToken cancellationToken)
-    {
-        var job = await _dbContext.Jobs
-            .FirstOrDefaultAsync(x => x.Id == jobId, cancellationToken);
-
-        if (job is null)
-        {
-            return;
-        }
-
-        job.Status = JobStatus.Failed;
-        job.Result = $"THIS MESSAGE HAS SUFFERED ENOUGH. {reason}";
-        job.DeadLetteredAtUtc = DateTime.UtcNow;
-        job.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
     }

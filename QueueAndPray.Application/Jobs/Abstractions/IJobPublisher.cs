@@ -2,7 +2,7 @@
 
 namespace QueueAndPray.Application.Jobs.Abstractions;
 
-public interface IJobDispatcher
+public interface IJobPublisher
 {
     Task DispatchAsync(Job job, CancellationToken cancellationToken);
 }

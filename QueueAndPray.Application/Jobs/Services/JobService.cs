@@ -11,11 +11,11 @@ namespace QueueAndPray.Application.Jobs.Services;
 public class JobService : IJobService
 {
     private readonly IJobRepository _jobRepository;
-    private readonly IJobDispatcher _jobDispatcher;
+    private readonly IJobPublisher _jobDispatcher;
 
     public JobService(
         IJobRepository jobRepository,
-        IJobDispatcher jobDispatcher)
+        IJobPublisher jobDispatcher)
     {
         _jobRepository = jobRepository;
         _jobDispatcher = jobDispatcher;
@@ -28,15 +28,11 @@ public class JobService : IJobService
         cancellationToken.ThrowIfCancellationRequested();
 
         var now = DateTime.UtcNow;
-        var jobId = Guid.NewGuid();
 
         var job = new Job(
-            id: jobId,
             description: request.Description,
             payload: request.Payload,
-            type: request.Type,
-            status: JobStatus.Queued,
-            result: null);
+            type: request.Type);
 
         await _jobRepository.AddAsync(job, cancellationToken);
 
@@ -44,7 +40,7 @@ public class JobService : IJobService
 
         var response = new CreateJobResponse
         {
-            JobId = jobId
+            JobId = job.Id
         };
 
         return response;
