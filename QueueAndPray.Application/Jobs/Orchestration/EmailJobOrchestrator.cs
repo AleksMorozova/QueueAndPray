@@ -1,7 +1,7 @@
-﻿using QueueAndPray.Application.Common.Resilience;
+﻿using QueueAndPray.Application.Common.Exceptions;
+using QueueAndPray.Application.Common.Resilience;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
-using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
 using QueueAndPray.Domain.Jobs;
 
 namespace QueueAndPray.Application.Jobs.Orchestration;
@@ -11,17 +11,17 @@ public class EmailJobOrchestrator : IEmailJobOrchestrator
     private readonly IEmailJobProcessor _processor;
     private readonly IRetryPolicyExecutor _retryPolicyExecutor;
     private readonly IJobRepository _jobRepository;
-    private readonly IJobStatusPublishers _jobStatusDispatcher;
+    private readonly IJobStatusPublisher _jobStatusPublisher;
 
     public EmailJobOrchestrator(
         IEmailJobProcessor processor,
         IRetryPolicyExecutor retryPolicyExecutor,
-        IJobStatusPublishers jobStatusDispatcher,
+        IJobStatusPublisher jobStatusPublisher,
         IJobRepository jobRepository)
     {
         _processor = processor;
         _retryPolicyExecutor = retryPolicyExecutor;
-        _jobStatusDispatcher = jobStatusDispatcher;
+        _jobStatusPublisher = jobStatusPublisher;
         _jobRepository = jobRepository;
     }
 
@@ -29,11 +29,14 @@ public class EmailJobOrchestrator : IEmailJobOrchestrator
         JobQueuedEvent payload,
         CancellationToken cancellationToken)
     {
-        var job = await _jobRepository.GetByIdAsync(
-            payload.JobId,
-            cancellationToken);
+        var job = await _jobRepository.GetByIdAsync(payload.JobId, cancellationToken);
 
         if (job is null)
+        {
+            throw new AppException("job_not_found_error", $"Job '{payload.JobId}' was not found. The queue swears it existed five minutes ago.");
+        }
+
+        if (!job.CanBeProcessed())
         {
             return;
         }
@@ -46,22 +49,32 @@ public class EmailJobOrchestrator : IEmailJobOrchestrator
 
             var result = await _retryPolicyExecutor.ExecuteAsync(
                 operation: ct => _processor.SendEmailAsync(payload, ct),
-                onRetry: (ex, attempt, ct) =>
+                onRetry: async (ex, attempt, ct) =>
                 {
                     job.TrackRetryAttempt(attempt, ex.Message);
-                    return _jobRepository.SaveAsync(job, ct);
+                    await _jobRepository.SaveAsync(job, ct);
                 },
                 cancellationToken: cancellationToken);
 
             if (result.IsSuccess)
             {
-                await _jobStatusDispatcher.DispatchAsync(payload, Domain.Jobs.JobStatus.Completed, null, cancellationToken);
+                await _jobStatusPublisher.PublishAsync(
+                    payload.JobId,
+                    payload.Type,
+                    JobStatus.Completed,
+                    "Email sent",
+                    cancellationToken);
 
                 //job.Complete("Email sent");
             }
             else
             {
-                await _jobStatusDispatcher.DispatchAsync(payload, Domain.Jobs.JobStatus.DeadLettered, "Email processing failed", cancellationToken);
+                await _jobStatusPublisher.PublishAsync(
+                    payload.JobId,
+                    payload.Type,
+                    JobStatus.DeadLettered,
+                    "Email processing failed. " + result?.FinalException?.Message,
+                    cancellationToken);
 
                 //job.DeadLetter(result.ErrorMessage ?? "Email processing failed");
             }
@@ -70,7 +83,13 @@ public class EmailJobOrchestrator : IEmailJobOrchestrator
         }
         catch (Exception ex)
         {
-            await _jobStatusDispatcher.DispatchAsync(payload, Domain.Jobs.JobStatus.Failed, "Email processing failed. " + ex.Message, cancellationToken);
+            await _jobStatusPublisher.PublishAsync(
+                payload.JobId,
+                payload.Type,
+                JobStatus.Failed,
+                "Email processing failed. " + ex.Message,
+                cancellationToken);
+
 
             //job.Fail(ex.Message);
 

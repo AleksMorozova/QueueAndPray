@@ -12,6 +12,7 @@ public sealed class QueueAndPrayDbContext : DbContext
 
     public DbSet<JobEntity> Jobs => Set<JobEntity>();
     public DbSet<JobStatusHistoryEntity> JobStatusHistory => Set<JobStatusHistoryEntity>();
+    public DbSet<OutboxMessageEntity> OutboxMessages => Set<OutboxMessageEntity>();
 
     //protected override void OnModelCreating(ModelBuilder modelBuilder)
     //{

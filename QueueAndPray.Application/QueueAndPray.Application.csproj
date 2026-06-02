@@ -15,8 +15,4 @@
     <ProjectReference Include="..\QueueAndPray.Domain\QueueAndPray.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Jobs\Dispatchers\" />
-  </ItemGroup>
-
 </Project>

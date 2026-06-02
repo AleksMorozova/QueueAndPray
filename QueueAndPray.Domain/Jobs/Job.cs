@@ -168,4 +168,9 @@ public class Job
                 status,
                 result));
     }
+
+    public bool CanBeProcessed()
+    {
+        return Status is JobStatus.Pending or JobStatus.Failed;
+    }
 }

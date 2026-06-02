@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using QueueAndPray.Api.Middleware;
-using QueueAndPray.Api.Workers;
 using QueueAndPray.Api.Workers.Messaging;
 using QueueAndPray.Application.Common.Resilience;
 using QueueAndPray.Application.Jobs.Abstractions;
@@ -8,7 +7,6 @@ using QueueAndPray.Application.Jobs.Orchestration;
 using QueueAndPray.Application.Jobs.Processors;
 using QueueAndPray.Application.Jobs.Publishers;
 using QueueAndPray.Application.Jobs.Services;
-using QueueAndPray.Infrastructure.Jobs.Messaging.InMemory;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using QueueAndPray.Infrastructure.Jobs.Persistence;
@@ -32,7 +30,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<IJobPublisher, JobPublisher>();
 
-builder.Services.AddSingleton<IJobStatusPublishers, JobStatusPublisher>();
+builder.Services.AddScoped<IJobStatusPublisher, JobStatusPublisher>(); 
+
 builder.Services.AddSingleton<IEmailJobProcessor, FakeEmailJobProcessor>();
 
 // In-memory persistence
@@ -56,6 +55,8 @@ builder.Services.AddSingleton<RabbitMqConnectionFactory>();
 builder.Services.AddSingleton<IJobQueue, RabbitMqJobQueue>();
 builder.Services.AddSingleton<IJobStatusQueue, RabbitMqJobStatusQueue>();
 
+builder.Services.AddScoped<IIntegrationEventPublisher, RabbitMqIntegrationEventPublisher>();
+
 // Background workers
 builder.Services.AddHostedService<RabbitMqJobStatusConsumerWorker>();
 builder.Services.AddHostedService<RabbitMqEmailJobConsumerWorker>();
@@ -67,6 +68,14 @@ builder.Services.AddScoped<IJobStatusProcessor, JobStatusProcessor>();
 builder.Services.AddSingleton<IRetryPolicyExecutor, RetryPolicyExecutor>();
 
 builder.Services.AddScoped<IEmailJobOrchestrator, EmailJobOrchestrator>();
+// Unit of Work
+builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+
+// Outbox
+builder.Services.AddScoped<IOutboxRepository, EfOutboxRepository>();
+builder.Services.AddScoped<IOutboxProcessor, OutboxProcessor>();
+
+builder.Services.AddHostedService<OutboxPublisherWorker>();
 
 var app = builder.Build();
 

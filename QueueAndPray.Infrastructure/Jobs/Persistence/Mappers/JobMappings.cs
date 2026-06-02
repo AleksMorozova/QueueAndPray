@@ -54,5 +54,6 @@ public static class JobMappings
         entity.UpdatedAtUtc = job.UpdatedAtUtc;
         entity.FirstFailedAtUtc = job.FirstFailedAtUtc;
         entity.DeadLetteredAtUtc = job.DeadLetteredAtUtc;
+        entity.CompletedAtUtc = job.CompletedAtUtc;
     }
 }

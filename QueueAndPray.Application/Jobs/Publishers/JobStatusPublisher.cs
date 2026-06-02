@@ -1,38 +1,57 @@
 ﻿using QueueAndPray.Application.Common.Exceptions;
 using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
+using QueueAndPray.Application.Jobs.Messaging;
 using QueueAndPray.Domain.Jobs;
 
 namespace QueueAndPray.Application.Jobs.Publishers;
 
-public class JobStatusPublisher : IJobStatusPublishers
+public class JobStatusPublisher : IJobStatusPublisher
 {
-    private readonly IJobStatusQueue _jobStatusQueue;
+    private readonly IOutboxRepository _outboxRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public JobStatusPublisher(IJobStatusQueue jobStatusQueue)
+    public JobStatusPublisher(
+        IOutboxRepository outboxRepository,
+        IUnitOfWork unitOfWork)
     {
-        _jobStatusQueue = jobStatusQueue;
+        _outboxRepository = outboxRepository;
+        _unitOfWork = unitOfWork;
     }
 
-    public async Task DispatchAsync(JobQueuedEvent jobQueuedEvent, JobStatus status, string? reason, CancellationToken cancellationToken)
+    public async Task PublishAsync(
+        Guid jobId,
+        JobType type,
+        JobStatus status,
+        string? reason,
+        CancellationToken cancellationToken)
     {
         try
         {
             var jobStatusEvent = new JobStatusEvent
             {
-                JobId = jobQueuedEvent.JobId,
+                JobId = jobId,
                 Status = status,
-                Type = JobType.Email,
+                Type = type,
                 ProceedsAtUtc = DateTime.UtcNow,
                 Reason = reason
             };
 
-            await _jobStatusQueue.PublishAsync(jobStatusEvent, cancellationToken);
+            var outboxMessage = OutboxMessage.Create(
+                routingKey: RoutingKeys.JobStatus,
+                payload: jobStatusEvent);
+
+            await _outboxRepository.AddAsync(
+                outboxMessage,
+                cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            throw new AppException("job_status_not_published", $"Job '{jobQueuedEvent.JobId}' was lost somewhere between hope and queue. Base exception: {ex.Message}");
+            throw new AppException(
+                "job_status_not_published",
+                $"Job '{jobId}' status was not published. The outbox raised its hand, but the transaction looked away. Base exception: {ex.Message}");
         }
     }
 }

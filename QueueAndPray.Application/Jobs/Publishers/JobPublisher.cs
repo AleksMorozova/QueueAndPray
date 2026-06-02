@@ -7,11 +7,11 @@ namespace QueueAndPray.Application.Jobs.Publishers;
 
 public sealed class JobPublisher : IJobPublisher
 {
-    private readonly IJobQueue _jobQueue;
+    private readonly IIntegrationEventPublisher _integrationEventPublisher;
 
-    public JobPublisher(IJobQueue jobQueue)
+    public JobPublisher(IIntegrationEventPublisher integrationEventPublisher)
     {
-        _jobQueue = jobQueue;
+        _integrationEventPublisher = integrationEventPublisher;
     }
 
     public async Task DispatchAsync(Job job, CancellationToken cancellationToken)
@@ -28,9 +28,9 @@ public sealed class JobPublisher : IJobPublisher
                     QueuedAtUtc = DateTime.UtcNow
                 };
 
-                await _jobQueue.PublishAsync(
-                    jobQueuedEvent,
-                    cancellationToken);
+                //await _integrationEventPublisher.PublishAsync(
+                //    jobQueuedEvent,
+                //    cancellationToken);
             }
         }
         catch (Exception ex)

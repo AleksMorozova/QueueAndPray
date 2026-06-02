@@ -1,8 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using QueueAndPray.Application.Common.Exceptions;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Domain.Jobs;
-using QueueAndPray.Infrastructure.Jobs.Persistence.Entities;
 using QueueAndPray.Infrastructure.Jobs.Persistence.Mappers;
 
 namespace QueueAndPray.Infrastructure.Jobs.Persistence;
@@ -25,7 +23,7 @@ public sealed class EfJobRepository : IJobRepository
 
         _dbContext.Jobs.Add(entity);
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        // await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<Job?> GetByIdAsync(

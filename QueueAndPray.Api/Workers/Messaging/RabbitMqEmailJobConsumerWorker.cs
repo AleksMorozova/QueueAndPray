@@ -2,6 +2,7 @@
 using QueueAndPray.Application.Common.Resilience;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
+using QueueAndPray.Application.Jobs.Messaging;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using System.Text;
@@ -44,6 +45,13 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
         await using var channel =
             await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
+        await channel.ExchangeDeclareAsync(
+            exchange: _options.EventsExchangeName,
+            type: RabbitMQ.Client.ExchangeType.Topic,
+            durable: true,
+            autoDelete: false,
+            cancellationToken: stoppingToken);
+
         await channel.QueueDeclareAsync(
             queue: _options.EmailJobQueueName,
             durable: true,
@@ -52,10 +60,14 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
             arguments: arguments,
             cancellationToken: stoppingToken);
 
+        await channel.QueueBindAsync(
+            queue: _options.EmailJobQueueName,
+            exchange: _options.EventsExchangeName,
+            routingKey: RoutingKeys.JobQueued,
+            cancellationToken: stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            Guid jobId = Guid.Empty;
-
             var result = await channel.BasicGetAsync(
                 queue: _options.EmailJobQueueName,
                 autoAck: false,
@@ -76,7 +88,7 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
                     "RabbitMQ status message received: {Message}",
                     message);
 
-                var envelope = JsonSerializer.Deserialize<JobQueuedEventEnvelope>(message);
+                var envelope = JsonSerializer.Deserialize<JobQueuedEvent>(message);
 
                 if (envelope is null)
                 {
@@ -86,15 +98,11 @@ public class RabbitMqEmailJobConsumerWorker : BackgroundService
 
                 _logger.LogInformation("Email job received: {Message}", message);
 
-                var payload = JsonSerializer.Deserialize<JobQueuedEvent>(envelope.Payload);
-                jobId = payload?.JobId ?? throw new InvalidOperationException(
-                    "RabbitMQ status payload is empty. QueueAndPray is confused.");
-
                 await using var scope = _scopeFactory.CreateAsyncScope();
 
                 var emailJobOrchestrator = scope.ServiceProvider.GetRequiredService<IEmailJobOrchestrator>();
 
-                await emailJobOrchestrator.ProcessAsync(payload, stoppingToken);
+                await emailJobOrchestrator.ProcessAsync(envelope, stoppingToken);
 
                 await channel.BasicAckAsync(
                     deliveryTag: result.DeliveryTag,

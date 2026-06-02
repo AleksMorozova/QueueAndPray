@@ -8,7 +8,11 @@ public class RabbitMqOptions
     public string Password { get; set; } = "guest";
     public string VirtualHost { get; set; } = "/";
 
+    public string EventsExchangeName { get; set; } = "queueandpray.events";
+
+    public string JobQueueName { get; set; } = "queueandpray.jobs";
     public string JobStatusQueueName { get; set; } = "queueandpray.job-status";
+
     public string EmailJobQueueName { get; set; } = "queueandpray.email.jobs";
     public string PdfGenerationJobQueueName { get; set; } = "queueandpray.pdf.jobs";
     public string ReportGenerationJobQueueName { get; set; } = "queueandpray.report.jobs";

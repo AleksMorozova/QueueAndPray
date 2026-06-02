@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
+using QueueAndPray.Application.Jobs.Messaging;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
+using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -38,12 +40,25 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
             await using var channel =
                 await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
+            await channel.ExchangeDeclareAsync(
+                exchange: _options.EventsExchangeName,
+                type: ExchangeType.Topic,
+                durable: true,
+                autoDelete: false,
+                cancellationToken: stoppingToken);
+
             await channel.QueueDeclareAsync(
                 queue: _options.JobStatusQueueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
                 arguments: null,
+                cancellationToken: stoppingToken);
+
+            await channel.QueueBindAsync(
+                queue: _options.JobStatusQueueName,
+                exchange: _options.EventsExchangeName,
+                routingKey: RoutingKeys.JobStatus,
                 cancellationToken: stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
