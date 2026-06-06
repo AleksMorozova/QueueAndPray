@@ -1,4 +1,5 @@
 ﻿using QueueAndPray.Application.Common.Exceptions;
+using QueueAndPray.Application.Common.Messaging;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Application.Jobs.Mappers;
@@ -44,19 +45,18 @@ public class JobService : IJobService
 
             var jobQueuedEvent = new JobQueuedEvent
             {
+                MessageId = Guid.NewGuid(),
                 JobId = job.Id,
                 Payload = job.Payload,
                 Type = job.Type,
                 QueuedAtUtc = DateTime.UtcNow
             };
 
-            var outboxMessage = OutboxMessage.Create(routingKey: "job.queued", payload: jobQueuedEvent);
+            var outboxMessage = OutboxMessage.Create(routingKey: RoutingKeyHelper.Queued(job.Type), payload: jobQueuedEvent);
 
             await _outboxRepository.AddAsync(outboxMessage, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // await _integrationEventPublisher.PublishAsync(outboxMessage.RoutingKey, outboxMessage.Payload, cancellationToken);
 
             var response = new CreateJobResponse
             {

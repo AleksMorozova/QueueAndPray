@@ -18,8 +18,7 @@ public sealed class OutboxPublisherWorker : BackgroundService
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
-        _logger.LogInformation(
-            "Outbox publisher worker started. The messages are preparing for their tiny journey.");
+        _logger.LogInformation("Outbox publisher worker started. The messages are preparing for their tiny journey.");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -37,9 +36,7 @@ public sealed class OutboxPublisherWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Outbox publisher worker failed. The outbox tried to be reliable, but reality filed a complaint.");
+                _logger.LogError(ex, "Outbox publisher worker failed. The outbox tried to be reliable, but reality filed a complaint.");
             }
 
             await Task.Delay(
@@ -47,7 +44,6 @@ public sealed class OutboxPublisherWorker : BackgroundService
                 stoppingToken);
         }
 
-        _logger.LogInformation(
-            "Outbox publisher worker stopped. The messages will continue their existential crisis later.");
+        _logger.LogInformation("Outbox publisher worker stopped. The messages will continue their existential crisis later.");
     }
 }

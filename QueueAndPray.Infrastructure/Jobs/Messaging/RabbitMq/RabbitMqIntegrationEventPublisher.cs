@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using QueueAndPray.Application.Common.Messaging;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using RabbitMQ.Client;
@@ -31,7 +32,7 @@ public sealed class RabbitMqIntegrationEventPublisher : IIntegrationEventPublish
             await connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
         await channel.ExchangeDeclareAsync(
-            exchange: _options.EventsExchangeName,
+            exchange: MessagingTopology.EventsExchangeName,
             type: ExchangeType.Topic,
             durable: true,
             autoDelete: false,
@@ -40,7 +41,7 @@ public sealed class RabbitMqIntegrationEventPublisher : IIntegrationEventPublish
         var body = Encoding.UTF8.GetBytes(payload);
 
         await channel.BasicPublishAsync(
-            exchange: _options.EventsExchangeName,
+            exchange: MessagingTopology.EventsExchangeName,
             routingKey: routingKey,
             mandatory: false,
             body: body,

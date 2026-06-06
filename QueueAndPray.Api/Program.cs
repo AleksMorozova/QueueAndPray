@@ -1,15 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using QueueAndPray.Api.Middleware;
 using QueueAndPray.Api.Workers.Messaging;
+using QueueAndPray.Application.Common.Messaging;
 using QueueAndPray.Application.Common.Resilience;
 using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Orchestration;
+using QueueAndPray.Application.Jobs.Processing;
 using QueueAndPray.Application.Jobs.Processors;
-using QueueAndPray.Application.Jobs.Publishers;
 using QueueAndPray.Application.Jobs.Services;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using QueueAndPray.Infrastructure.Jobs.Persistence;
+using QueueAndPray.Infrastructure.Jobs.Persistence.EF;
+using QueueAndPray.Infrastructure.Jobs.Persistence.EF.Repositories;
 using QueueAndPray.Infrastructure.Resilience;
 using System.Text.Json.Serialization;
 
@@ -28,14 +30,12 @@ builder.Services.AddSwaggerGen();
 
 // Application services
 builder.Services.AddScoped<IJobService, JobService>();
-builder.Services.AddScoped<IJobPublisher, JobPublisher>();
 
 builder.Services.AddScoped<IJobStatusPublisher, JobStatusPublisher>(); 
 
 builder.Services.AddSingleton<IEmailJobProcessor, FakeEmailJobProcessor>();
 
-// In-memory persistence
-//builder.Services.AddSingleton<IJobRepository, InMemoryJobRepository>();
+// DB persistence
 builder.Services.AddDbContext<QueueAndPrayDbContext>(options =>
 {
     options.UseNpgsql(
@@ -43,6 +43,13 @@ builder.Services.AddDbContext<QueueAndPrayDbContext>(options =>
 });
 
 builder.Services.AddScoped<IJobRepository, EfJobRepository>();
+builder.Services.AddScoped<IJobRepository, EfJobRepository>();
+builder.Services.AddScoped<IOutboxRepository, EfOutboxRepository>();
+builder.Services.AddScoped<IInboxRepository, EfInboxRepository>();
+
+// Unit of Work
+builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+
 // messaging
 builder.Services.Configure<RabbitMqOptions>(
     builder.Configuration.GetSection("RabbitMq"));
@@ -52,29 +59,23 @@ builder.Services.Configure<RabbitMqRetryOptions>(
 
 builder.Services.AddSingleton<RabbitMqConnectionFactory>();
 
-builder.Services.AddSingleton<IJobQueue, RabbitMqJobQueue>();
-builder.Services.AddSingleton<IJobStatusQueue, RabbitMqJobStatusQueue>();
-
 builder.Services.AddScoped<IIntegrationEventPublisher, RabbitMqIntegrationEventPublisher>();
+
+// Job processing
+builder.Services.AddScoped<IJobStatusProcessor, JobStatusProcessor>();
+builder.Services.AddSingleton<IRetryPolicyExecutor, RetryPolicyExecutor>();
+builder.Services.AddScoped<IEmailJobOrchestrator, EmailJobOrchestrator>();
+
+// Outbox
+builder.Services.AddScoped<IOutboxProcessor, OutboxProcessor>();
+
+// Inbox
+builder.Services.AddScoped<IJobQueuedMessageHandler, JobQueuedMessageHandler>();
 
 // Background workers
 builder.Services.AddHostedService<RabbitMqJobStatusConsumerWorker>();
 builder.Services.AddHostedService<RabbitMqEmailJobConsumerWorker>();
 builder.Services.AddHostedService<RabbitMqDeadLetterEmailWorker>();
-
-// Job processing
-builder.Services.AddScoped<IJobStatusProcessor, JobStatusProcessor>();
-
-builder.Services.AddSingleton<IRetryPolicyExecutor, RetryPolicyExecutor>();
-
-builder.Services.AddScoped<IEmailJobOrchestrator, EmailJobOrchestrator>();
-// Unit of Work
-builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
-
-// Outbox
-builder.Services.AddScoped<IOutboxRepository, EfOutboxRepository>();
-builder.Services.AddScoped<IOutboxProcessor, OutboxProcessor>();
-
 builder.Services.AddHostedService<OutboxPublisherWorker>();
 
 var app = builder.Build();

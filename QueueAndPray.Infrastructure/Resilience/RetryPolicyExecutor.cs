@@ -16,13 +16,11 @@ public sealed class RetryPolicyExecutor : IRetryPolicyExecutor
     }
 
     public async Task<RetryExecutionResult> ExecuteAsync(
-     Func<CancellationToken, Task> operation,
-     Func<Exception, int, CancellationToken, Task>? onRetry,
-     CancellationToken cancellationToken)
+        Func<CancellationToken, Task> operation,
+        Func<Exception, int, CancellationToken, Task>? onRetry,
+        CancellationToken cancellationToken)
     {
-        const int maxAttempts = 3;
-
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             try
             {
@@ -30,7 +28,7 @@ public sealed class RetryPolicyExecutor : IRetryPolicyExecutor
 
                 return new RetryExecutionResult(true);
             }
-            catch (Exception ex) when (attempt < maxAttempts)
+            catch (Exception ex) when (attempt <= MaxAttempts)
             {
                 if (onRetry is not null)
                 {
