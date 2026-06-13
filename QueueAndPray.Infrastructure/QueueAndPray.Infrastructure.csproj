@@ -9,13 +9,15 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.27" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.27" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.8" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
     <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\QueueAndPray.Application\QueueAndPray.Application.csproj" />
+    <ProjectReference Include="..\QueueAndPray.Abstractions\QueueAndPray.Abstractions.csproj" />
     <ProjectReference Include="..\QueueAndPray.Domain\QueueAndPray.Domain.csproj" />
   </ItemGroup>
 

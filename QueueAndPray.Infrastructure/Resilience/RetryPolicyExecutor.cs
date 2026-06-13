@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using QueueAndPray.Application.Common.Resilience;
+using Microsoft.Extensions.Logging;
+using QueueAndPray.Abstractions.Common.Resilience;
 
 namespace QueueAndPray.Infrastructure.Resilience;
 
@@ -15,56 +15,35 @@ public sealed class RetryPolicyExecutor : IRetryPolicyExecutor
         _logger = logger;
     }
 
-    public async Task ExecuteAsync(
+    public async Task<RetryExecutionResult> ExecuteAsync(
         Func<CancellationToken, Task> operation,
         Func<Exception, int, CancellationToken, Task>? onRetry,
-        Func<Exception, int, CancellationToken, Task>? onFinalFailure,
         CancellationToken cancellationToken)
     {
+        Exception? lastException = null;
+
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             try
             {
                 await operation(cancellationToken);
-                return;
+                return new RetryExecutionResult(true);
             }
             catch (Exception ex)
             {
-                if (attempt == MaxAttempts)
+                lastException = ex;
+
+                if (attempt <= MaxAttempts && onRetry is not null)
                 {
-                    _logger.LogError(
-                        ex,
-                        "Operation failed on final attempt {Attempt}.",
-                        attempt);
-
-                    if (onFinalFailure is not null)
-                    {
-                        await onFinalFailure(
-                            ex,
-                            attempt,
-                            cancellationToken);
-                    }
-
-                    throw;
+                    await onRetry(ex, attempt, cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(attempt), cancellationToken);
                 }
-
-                _logger.LogWarning(
-                    ex,
-                    "Operation failed on attempt {Attempt}. Retrying...",
-                    attempt);
-
-                if (onRetry is not null)
-                {
-                    await onRetry(
-                        ex,
-                        attempt,
-                        cancellationToken);
-                }
-
-                await Task.Delay(
-                    TimeSpan.FromSeconds(attempt),
-                    cancellationToken);
             }
         }
+
+        return new RetryExecutionResult(
+            false,
+            lastException?.Message ?? "Max retries exceeded",
+            lastException);
     }
 }

@@ -1,29 +1,26 @@
-﻿using Microsoft.Extensions.Options;
-using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
+using Microsoft.Extensions.Options;
+using QueueAndPray.Abstractions.Messaging;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
+using QueueAndPray.Abstractions.Jobs.Events.JobStatusEvents;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
-using QueueAndPray.Infrastructure.Jobs.Options;
+using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
 
 namespace QueueAndPray.Api.Workers.Messaging;
 
 public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
 {
     private readonly RabbitMqConnectionFactory _connectionFactory;
-    private readonly RabbitMqOptions _options;
     private readonly ILogger<RabbitMqJobStatusConsumerWorker> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
 
     public RabbitMqJobStatusConsumerWorker(
         RabbitMqConnectionFactory connectionFactory,
-        IOptions<RabbitMqOptions> options,
         ILogger<RabbitMqJobStatusConsumerWorker> logger,
         IServiceScopeFactory scopeFactory)
     {
         _connectionFactory = connectionFactory;
-        _options = options.Value;
         _logger = logger;
         _scopeFactory = scopeFactory;
     }
@@ -38,18 +35,31 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
             await using var channel =
                 await connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
+            await channel.ExchangeDeclareAsync(
+                exchange: MessagingTopology.EventsExchangeName,
+                type: ExchangeType.Topic,
+                durable: true,
+                autoDelete: false,
+                cancellationToken: stoppingToken);
+
             await channel.QueueDeclareAsync(
-                queue: _options.JobStatusQueueName,
+                queue: MessagingTopology.JobStatusQueueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
                 arguments: null,
                 cancellationToken: stoppingToken);
 
+            await channel.QueueBindAsync(
+                queue: MessagingTopology.JobStatusQueueName,
+                exchange: MessagingTopology.EventsExchangeName,
+                routingKey: JobBindingPatterns.AnyStatus,
+                cancellationToken: stoppingToken);
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 var result = await channel.BasicGetAsync(
-                    queue: _options.JobStatusQueueName,
+                    queue: MessagingTopology.JobStatusQueueName,
                     autoAck: false,
                     cancellationToken: stoppingToken);
 
@@ -67,8 +77,7 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
 
                     if (envelope is null)
                     {
-                        throw new InvalidOperationException(
-                            "RabbitMQ status envelope is empty. QueueAndPray is confused.");
+                        throw new InvalidOperationException("RabbitMQ status envelope is empty. QueueAndPray is confused.");
                     }
 
                     _logger.LogInformation(
@@ -83,6 +92,9 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
 
                     await processor.DispatchAsync(new JobStatusEvent
                     {
+                        MessageId = envelope.MessageId,
+                        CorrelationId = envelope.CorrelationId,
+                        CausationId = envelope.CausationId,
                         Type = envelope.Type,
                         JobId = envelope.JobId,
                         Status = envelope.Status,
@@ -113,8 +125,7 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation(
-                "RabbitMQ job status consumer is stopping gracefully.");
+            _logger.LogInformation("RabbitMQ job status consumer is stopping gracefully.");
         }
     }
 }

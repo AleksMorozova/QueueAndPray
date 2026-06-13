@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\QueueAndPray.Abstractions\QueueAndPray.Abstractions.csproj" />
     <ProjectReference Include="..\QueueAndPray.Contracts\QueueAndPray.Contracts.csproj" />
     <ProjectReference Include="..\QueueAndPray.Domain\QueueAndPray.Domain.csproj" />
   </ItemGroup>

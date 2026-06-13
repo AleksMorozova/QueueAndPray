@@ -1,4 +1,4 @@
-﻿using QueueAndPray.Contracts.Common;
+using QueueAndPray.Contracts.Common;
 using QueueAndPray.Contracts.Jobs.Requests;
 using QueueAndPray.Contracts.Jobs.Responses;
 

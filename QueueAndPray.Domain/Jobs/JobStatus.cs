@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace QueueAndPray.Domain.Jobs;
+﻿namespace QueueAndPray.Domain.Jobs;
 
 public enum JobStatus
 {
-    Queued = 1,
-    Processing = 2,
-    Completed = 3,
-    Failed = 4
+    Pending = 0,
+    Processing = 1,
+    Completed = 2,
+    Failed = 3,
+    DeadLettered = 4
 }

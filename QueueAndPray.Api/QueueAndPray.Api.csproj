@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\QueueAndPray.Abstractions\QueueAndPray.Abstractions.csproj" />
     <ProjectReference Include="..\QueueAndPray.Application\QueueAndPray.Application.csproj" />
     <ProjectReference Include="..\QueueAndPray.Contracts\QueueAndPray.Contracts.csproj" />
     <ProjectReference Include="..\QueueAndPray.Infrastructure\QueueAndPray.Infrastructure.csproj" />

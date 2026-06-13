@@ -1,5 +1,8 @@
-﻿using QueueAndPray.Application.Common.Exceptions;
+using QueueAndPray.Abstractions.Common.Exceptions;
+using QueueAndPray.Abstractions.Messaging;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Abstractions;
+using QueueAndPray.Abstractions.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Application.Jobs.Mappers;
 using QueueAndPray.Contracts.Common;
 using QueueAndPray.Contracts.Jobs.Requests;
@@ -11,43 +14,62 @@ namespace QueueAndPray.Application.Jobs.Services;
 public class JobService : IJobService
 {
     private readonly IJobRepository _jobRepository;
-    private readonly IJobDispatcher _jobDispatcher;
+    private readonly IOutboxRepository _outboxRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public JobService(
         IJobRepository jobRepository,
-        IJobDispatcher jobDispatcher)
+        IOutboxRepository outboxRepository,
+        IUnitOfWork unitOfWork)
     {
         _jobRepository = jobRepository;
-        _jobDispatcher = jobDispatcher;
+        _outboxRepository = outboxRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public virtual async Task<CreateJobResponse> CreateJobAsync(CreateJobRequest request, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var now = DateTime.UtcNow;
-        var jobId = Guid.NewGuid();
-
-        var job = new Job(
-            id: jobId,
-            description: request.Description,
-            payload: request.Payload,
-            type: request.Type,
-            status: JobStatus.Queued,
-            result: null);
-
-        await _jobRepository.AddAsync(job, cancellationToken);
-
-        await _jobDispatcher.DispatchAsync(job, cancellationToken);
-
-        var response = new CreateJobResponse
+        try 
         {
-            JobId = jobId
-        };
+            ArgumentNullException.ThrowIfNull(request);
 
-        return response;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var now = DateTime.UtcNow;
+
+            var job = new Job(
+                description: request.Description,
+                payload: request.Payload,
+                type: request.Type);
+
+            await _jobRepository.AddAsync(job, cancellationToken);
+
+            var jobQueuedEvent = new JobQueuedEvent
+            {
+                MessageId = Guid.NewGuid(),
+                JobId = job.Id,
+                Payload = job.Payload,
+                Type = job.Type,
+                QueuedAtUtc = DateTime.UtcNow
+            };
+
+            var outboxMessage = OutboxMessage.Create(routingKey: RoutingKeyHelper.Queued(job.Type), payload: jobQueuedEvent);
+
+            await _outboxRepository.AddAsync(outboxMessage, cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var response = new CreateJobResponse
+            {
+                JobId = job.Id
+            };
+
+            return response;
+        }
+        catch(Exception ex)
+        {
+            throw new AppException("job_not_created", $"Job was not created. The queue prayed, the outbox believed, but the transaction had other plans. Base exception: {ex.Message}");
+        }
     }
 
     public virtual async Task<JobDetailedResponse> GetJobAsync(Guid jobId, CancellationToken cancellationToken)
