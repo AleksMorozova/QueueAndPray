@@ -1,4 +1,4 @@
-﻿using QueueAndPray.Application.Jobs.Abstractions;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
 
 namespace QueueAndPray.Api.Workers.Messaging;
 

@@ -1,4 +1,4 @@
-﻿using QueueAndPray.Application.Common.Exceptions;
+using QueueAndPray.Abstractions.Common.Exceptions;
 using QueueAndPray.Contracts.Common;
 using System.Net;
 using System.Text.Json;

@@ -18,7 +18,7 @@ internal static class JobMapper
             Type = job.Type,
             Status = job.Status,
             Payload = job.Payload,
-            Result = job.Result,
+            Result = job.Result ?? string.Empty,
             RetryCount = job.RetryCount,
             CreatedAt = new DateTimeOffset(createdUtc),
             CompletedAt = ToDateTimeOffset(job.CompletedAtUtc),
@@ -42,7 +42,7 @@ internal static class JobMapper
             Description = job.Description,
             Type = job.Type,
             Status = job.Status,
-            Result = job.Result
+            Result = job.Result ?? string.Empty
         };
     }
 

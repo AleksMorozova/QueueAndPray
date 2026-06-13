@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using QueueAndPray.Application.Jobs.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
 using QueueAndPray.Domain.Jobs;
 using QueueAndPray.Infrastructure.Jobs.Persistence.EF;
 using QueueAndPray.Infrastructure.Jobs.Persistence.EF.Mappers;

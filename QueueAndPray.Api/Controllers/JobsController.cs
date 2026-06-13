@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Contracts.Common;
 using QueueAndPray.Contracts.Jobs.Requests;

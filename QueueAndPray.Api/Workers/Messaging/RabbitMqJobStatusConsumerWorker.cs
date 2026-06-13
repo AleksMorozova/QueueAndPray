@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Options;
-using QueueAndPray.Application.Common.Messaging;
-using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Events.JobStatusEvents;
+using Microsoft.Extensions.Options;
+using QueueAndPray.Abstractions.Messaging;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
+using QueueAndPray.Abstractions.Jobs.Events.JobStatusEvents;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using RabbitMQ.Client;
 using System.Text;
@@ -92,6 +92,9 @@ public sealed class RabbitMqJobStatusConsumerWorker : BackgroundService
 
                     await processor.DispatchAsync(new JobStatusEvent
                     {
+                        MessageId = envelope.MessageId,
+                        CorrelationId = envelope.CorrelationId,
+                        CausationId = envelope.CausationId,
                         Type = envelope.Type,
                         JobId = envelope.JobId,
                         Status = envelope.Status,

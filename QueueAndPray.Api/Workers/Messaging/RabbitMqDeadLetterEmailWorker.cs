@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Options;
-using QueueAndPray.Application.Common.Messaging;
-using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
+using Microsoft.Extensions.Options;
+using QueueAndPray.Abstractions.Messaging;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
+using QueueAndPray.Abstractions.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Domain.Jobs;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
@@ -92,6 +92,8 @@ public sealed class RabbitMqDeadLetterEmailWorker : BackgroundService
 
                 var jobStatusPublisher = scope.ServiceProvider
                     .GetRequiredService<IJobStatusPublisher>();
+                var unitOfWork = scope.ServiceProvider
+                    .GetRequiredService<IUnitOfWork>();
 
                 await jobStatusPublisher.PublishAsync(
                     payload.JobId,
@@ -99,6 +101,8 @@ public sealed class RabbitMqDeadLetterEmailWorker : BackgroundService
                     Domain.Jobs.JobStatus.DeadLettered,
                     "Email job message reached dead-letter queue. It has suffered enough.",
                     stoppingToken);
+
+                await unitOfWork.SaveChangesAsync(stoppingToken);
 
                 await channel.BasicAckAsync(
                     deliveryTag: result.DeliveryTag,

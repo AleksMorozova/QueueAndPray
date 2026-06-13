@@ -12,6 +12,12 @@ public class OutboxMessageEntity
 
     public DateTime? PublishedAtUtc { get; set; }
 
+    public DateTime? LockedUntilUtc { get; set; }
+
+    public DateTime? NextAttemptAtUtc { get; set; }
+
+    public int AttemptCount { get; set; }
+
     public string? Error { get; set; }
 
     public string RoutingKey { get; set; } = default!;

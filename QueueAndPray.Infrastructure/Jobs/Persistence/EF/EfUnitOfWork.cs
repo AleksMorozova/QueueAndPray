@@ -1,4 +1,4 @@
-﻿using QueueAndPray.Application.Jobs.Abstractions;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
 using QueueAndPray.Infrastructure.Jobs.Persistence.EF;
 
 namespace QueueAndPray.Infrastructure.Jobs.Persistence;

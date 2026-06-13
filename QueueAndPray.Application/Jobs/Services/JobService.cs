@@ -1,7 +1,8 @@
-﻿using QueueAndPray.Application.Common.Exceptions;
-using QueueAndPray.Application.Common.Messaging;
+using QueueAndPray.Abstractions.Common.Exceptions;
+using QueueAndPray.Abstractions.Messaging;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Abstractions;
-using QueueAndPray.Application.Jobs.Events.JobQueueEvents;
+using QueueAndPray.Abstractions.Jobs.Events.JobQueueEvents;
 using QueueAndPray.Application.Jobs.Mappers;
 using QueueAndPray.Contracts.Common;
 using QueueAndPray.Contracts.Jobs.Requests;

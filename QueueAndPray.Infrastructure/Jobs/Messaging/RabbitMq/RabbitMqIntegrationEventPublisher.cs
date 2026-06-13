@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Options;
-using QueueAndPray.Application.Common.Messaging;
-using QueueAndPray.Application.Jobs.Abstractions;
+using Microsoft.Extensions.Options;
+using QueueAndPray.Abstractions.Messaging;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using RabbitMQ.Client;
 using System.Text;

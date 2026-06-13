@@ -20,6 +20,9 @@ public static class OutboxMappings
             payload: entity.Payload,
             createdAtUtc: entity.CreatedAtUtc,
             publishedAtUtc: entity.PublishedAtUtc,
+            lockedUntilUtc: entity.LockedUntilUtc,
+            nextAttemptAtUtc: entity.NextAttemptAtUtc,
+            attemptCount: entity.AttemptCount,
             error: entity.Error);
     }
 
@@ -33,6 +36,9 @@ public static class OutboxMappings
             Payload = message.Payload,
             CreatedAtUtc = message.CreatedAtUtc,
             PublishedAtUtc = message.PublishedAtUtc,
+            LockedUntilUtc = message.LockedUntilUtc,
+            NextAttemptAtUtc = message.NextAttemptAtUtc,
+            AttemptCount = message.AttemptCount,
             Error = message.Error,
             RoutingKey = message.RoutingKey
         };
@@ -43,6 +49,9 @@ public static class OutboxMappings
         OutboxMessage message)
     {
         entity.PublishedAtUtc = message.PublishedAtUtc;
+        entity.LockedUntilUtc = message.LockedUntilUtc;
+        entity.NextAttemptAtUtc = message.NextAttemptAtUtc;
+        entity.AttemptCount = message.AttemptCount;
         entity.Error = message.Error;
     }
 }

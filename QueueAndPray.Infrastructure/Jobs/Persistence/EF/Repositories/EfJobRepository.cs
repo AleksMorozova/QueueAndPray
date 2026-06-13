@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using QueueAndPray.Application.Jobs.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
 using QueueAndPray.Domain.Jobs;
 using QueueAndPray.Infrastructure.Jobs.Persistence.EF.Mappers;
 
@@ -15,7 +15,7 @@ public sealed class EfJobRepository : IJobRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(
+    public Task AddAsync(
         Job job,
         CancellationToken cancellationToken)
     {
@@ -23,7 +23,7 @@ public sealed class EfJobRepository : IJobRepository
 
         _dbContext.Jobs.Add(entity);
 
-        // await _dbContext.SaveChangesAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
     public async Task<Job?> GetByIdAsync(
@@ -80,6 +80,6 @@ public sealed class EfJobRepository : IJobRepository
                 cancellationToken);
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await Task.CompletedTask;
     }
 }

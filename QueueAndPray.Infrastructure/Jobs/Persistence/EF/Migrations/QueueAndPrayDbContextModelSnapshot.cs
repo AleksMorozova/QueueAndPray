@@ -22,7 +22,7 @@ namespace QueueAndPray.Infrastructure.Jobs.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.InboxMessageEntity", b =>
+            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.EF.Entities.InboxMessageEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -36,10 +36,13 @@ namespace QueueAndPray.Infrastructure.Jobs.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MessageId")
+                        .IsUnique();
+
                     b.ToTable("InboxMessages");
                 });
 
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobEntity", b =>
+            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.EF.Entities.JobEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -85,7 +88,7 @@ namespace QueueAndPray.Infrastructure.Jobs.Persistence.Migrations
                     b.ToTable("Jobs");
                 });
 
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobStatusHistoryEntity", b =>
+            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.EF.Entities.JobStatusHistoryEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -110,17 +113,26 @@ namespace QueueAndPray.Infrastructure.Jobs.Persistence.Migrations
                     b.ToTable("JobStatusHistory");
                 });
 
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.OutboxMessageEntity", b =>
+            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.EF.Entities.OutboxMessageEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Error")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Payload")
                         .IsRequired()
@@ -139,12 +151,14 @@ namespace QueueAndPray.Infrastructure.Jobs.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PublishedAtUtc", "LockedUntilUtc", "NextAttemptAtUtc", "CreatedAtUtc");
+
                     b.ToTable("OutboxMessages");
                 });
 
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobStatusHistoryEntity", b =>
+            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.EF.Entities.JobStatusHistoryEntity", b =>
                 {
-                    b.HasOne("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobEntity", "Job")
+                    b.HasOne("QueueAndPray.Infrastructure.Jobs.Persistence.EF.Entities.JobEntity", "Job")
                         .WithMany("StatusHistory")
                         .HasForeignKey("JobId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -153,7 +167,7 @@ namespace QueueAndPray.Infrastructure.Jobs.Persistence.Migrations
                     b.Navigation("Job");
                 });
 
-            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.Entities.JobEntity", b =>
+            modelBuilder.Entity("QueueAndPray.Infrastructure.Jobs.Persistence.EF.Entities.JobEntity", b =>
                 {
                     b.Navigation("StatusHistory");
                 });

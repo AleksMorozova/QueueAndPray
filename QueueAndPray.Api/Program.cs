@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using QueueAndPray.Api.Middleware;
 using QueueAndPray.Api.Workers.Messaging;
-using QueueAndPray.Application.Common.Messaging;
-using QueueAndPray.Application.Common.Resilience;
+using QueueAndPray.Abstractions.Common.Resilience;
+using QueueAndPray.Abstractions.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Abstractions;
 using QueueAndPray.Application.Jobs.Processing;
-using QueueAndPray.Application.Jobs.Processors;
 using QueueAndPray.Application.Jobs.Services;
+using QueueAndPray.Infrastructure.Jobs.Messaging.Outbox;
 using QueueAndPray.Infrastructure.Jobs.Messaging.RabbitMq;
 using QueueAndPray.Infrastructure.Jobs.Options;
 using QueueAndPray.Infrastructure.Jobs.Persistence;
@@ -30,10 +30,6 @@ builder.Services.AddSwaggerGen();
 
 // Application services
 builder.Services.AddScoped<IJobService, JobService>();
-
-builder.Services.AddScoped<IJobStatusPublisher, JobStatusPublisher>(); 
-
-builder.Services.AddSingleton<IEmailJobProcessor, FakeEmailJobProcessor>();
 
 // DB persistence
 builder.Services.AddDbContext<QueueAndPrayDbContext>(options =>
@@ -60,22 +56,18 @@ builder.Services.Configure<RabbitMqRetryOptions>(
 builder.Services.AddSingleton<RabbitMqConnectionFactory>();
 
 builder.Services.AddScoped<IIntegrationEventPublisher, RabbitMqIntegrationEventPublisher>();
+builder.Services.AddScoped<IJobStatusPublisher, OutboxJobStatusPublisher>();
 
 // Job processing
 builder.Services.AddScoped<IJobStatusProcessor, JobStatusProcessor>();
 builder.Services.AddSingleton<IRetryPolicyExecutor, RetryPolicyExecutor>();
-builder.Services.AddScoped<IEmailJobOrchestrator, EmailJobOrchestrator>();
 
 // Outbox
 builder.Services.AddScoped<IOutboxProcessor, OutboxProcessor>();
 
-// Inbox
-builder.Services.AddScoped<IJobQueuedMessageHandler, JobQueuedMessageHandler>();
-
 // Background workers
 builder.Services.AddHostedService<RabbitMqJobStatusConsumerWorker>();
-builder.Services.AddHostedService<RabbitMqEmailJobConsumerWorker>();
-builder.Services.AddHostedService<RabbitMqDeadLetterEmailWorker>();
+// builder.Services.AddHostedService<RabbitMqDeadLetterEmailWorker>();
 builder.Services.AddHostedService<OutboxPublisherWorker>();
 
 var app = builder.Build();
